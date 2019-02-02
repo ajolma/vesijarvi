@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="OpenLayers_Geometry_Point_18769"
+   cx="10"
+   cy="10"
+   r="1"
+   viewBox="-10 -10 30 30"
+   width="21"
+   height="21"
+   x="-8"
+   y="-8"
+   fill="blue"
+   fill-opacity="0.5"
+   stroke="black"
+   stroke-opacity="1"
+   stroke-width="0.8333333333333334"
+   stroke-linecap="butt"
+   stroke-linejoin="round"
+   version="1.1"
+   sodipodi:docname="hulekohteet.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <metadata
+     id="metadata5150">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs5148" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="770"
+     inkscape:window-height="480"
+     id="namedview5146"
+     showgrid="false"
+     inkscape:zoom="6.5555556"
+     inkscape:cx="18"
+     inkscape:cy="18"
+     inkscape:window-x="242"
+     inkscape:window-y="175"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="OpenLayers_Geometry_Point_18769" />
+  <polygon
+     points="10,10 5,0 0,10 "
+     transform="matrix(1.7578563,1.7136445,-1.7578563,1.7136445,8.9616116,-16.386146)"
+     id="polygon5143" />
+</svg>
