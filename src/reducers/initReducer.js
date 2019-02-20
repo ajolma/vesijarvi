@@ -2,12 +2,12 @@ import {getMapZoom} from '../components/MyMap';
 import L from 'leaflet';
 
 import {
+    GET_POPUP_OK,
+    GET_POPUP_FAIL,
     GET_LAYERS_OK,
     GET_LAYERS_FAIL,
     GET_OIKEUDET_OK,
     GET_OIKEUDET_FAIL,
-    GET_LAKES_OK,
-    GET_LAKES_FAIL,
     GET_BACKGROUND_OK,
     GET_BACKGROUND_FAIL,
     SELECT_BACKGROUND,
@@ -15,6 +15,8 @@ import {
     GET_FLAGS_FAIL,
     GET_BATHYMETRY_OK,
     GET_BATHYMETRY_FAIL,
+    GET_LAKE_AREAS_OK,
+    GET_LAKE_AREAS_FAIL,
     SHOW_LAYER,
     HIDE_LAYER,
     SHOW_ALL_LAYERS,
@@ -27,14 +29,13 @@ import {
 const initialState = {
     latlng: [61.05, 25.55],
     zoom: 11,
+    popup: [],
     layers: [],
     features: [],
     selected_feature: null,
-    styles: [],
-    lakes: [],
+    lakes: null, // pointer to lake layer
     backgrounds: [],
     flags: [],
-    bathymetries: [],
     oikeudet: {},
     error: undefined
 }
@@ -42,14 +43,14 @@ const initialState = {
 function makeMarker(feature, latlng) {
     let props = feature.properties;
     let myIcon;
-    if (props.legend === 'nimi') {
+    if (props.label) {
         myIcon = L.divIcon({
             className: 'my-div-icon',
-            html: props.nimi
+            html: props[props.label]
         });
     } else {
         myIcon = L.icon({
-            iconUrl: '/media/' + props.legend,
+            iconUrl: 'media/' + props.legend,
             iconSize: [props.graphic_width, props.graphic_height]
         });
     }
@@ -57,18 +58,36 @@ function makeMarker(feature, latlng) {
 }
 
 const initReducer = (state=initialState, action) => {
+    console.log(action);
     switch (action.type) {
+    case GET_POPUP_OK:
+        return {
+            ...state,
+            popup: action.data,
+            error: ''
+        };
+    case GET_POPUP_FAIL:
+        return {
+            ...state,
+            error: action.error
+        };
     case GET_LAYERS_OK:
+        let lakes = state.lakes;
         let layers = [];
-        action.data.sort(function(a, b) {
-            return a.name.localeCompare(b.name, 'fi');
-        });
         let features = [];
-        let styles = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            layers.push(state.layers[i]);
+        }
+        for (let i = 0; i < state.features.length; i++) {
+            features.push(state.features[i]);
+        }
         for (let i = 0; i < action.data.length; i++) {
             let layer = action.data[i];
+            if (!lakes && layer.name === 'Järvet') {
+                lakes = layer;
+            }
+            layer.style = makeMarker;
             layers.push(layer);
-            styles.push(makeMarker);
             let fs = layer.features;
             if (fs && fs.features && layer.leaf < 5) {
                 fs = fs.features;
@@ -76,8 +95,10 @@ const initReducer = (state=initialState, action) => {
                     let coords = fs[j].geometry.coordinates;
                     let p = fs[j].properties;
                     p.legend = layer.legend;
+                    p.label = layer.label;
                     p.graphic_width = layer.graphic_width;
                     p.graphic_height = layer.graphic_height;
+                    p.kohdetyyppi = layer.name;
                     features.push({
                         properties: p,
                         latlng: [coords[1], coords[0]]
@@ -85,37 +106,28 @@ const initReducer = (state=initialState, action) => {
                 }
             }
         }
+        layers.sort(function(a, b) {
+            let n = a.name;
+            if (typeof n === 'undefined') {
+                n = '';
+            }
+            return n.localeCompare(b.name, 'fi');
+        });
         features.sort(function(a, b) {
-            return a.properties.nimi.localeCompare(b.properties.nimi, 'fi');
+            let n = a.properties.nimi;
+            if (typeof n === 'undefined') {
+                n = '';
+            }
+            return n.localeCompare(b.properties.nimi, 'fi');
         });
         return {
             ...state,
             layers: layers,
             features: features,
-            styles: styles,
+            lakes: lakes,
             error: ''
         };
     case GET_LAYERS_FAIL:
-        return {
-            ...state,
-            error: action.error
-        };
-    case GET_LAKES_OK:
-        let lakes = action.data.sort(function(a, b) {
-            return a.nimi.localeCompare(b.nimi, 'fi');
-        });
-        let bathymetries = [];
-        for (let i = 0; i < lakes.length; i++) {
-            lakes[i].show_bathymetry = false;
-            bathymetries.push(null);
-        }
-        return {
-            ...state,
-            lakes: lakes,
-            bathymetries: bathymetries,
-            error: ''
-        };
-    case GET_LAKES_FAIL:
         return {
             ...state,
             error: action.error
@@ -192,20 +204,54 @@ const initReducer = (state=initialState, action) => {
             error: action.error
         };
     case GET_BATHYMETRY_OK:
-        bathymetries = [];
-        for (let i = 0; i < state.bathymetries.length; i++) {
-            if (state.lakes[i].id === action.lake.id) {
-                bathymetries.push(action.data);
-            } else {
-                bathymetries.push(state.bathymetries[i]);
+        lakes = null;
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            layers.push(state.layers[i]);
+            if (state.layers[i].name === 'Järvet') {
+                lakes = state.layers[i];
+                for (let i = 0; i < lakes.features.features.length; i++) {
+                    let lake = lakes.features.features[i];
+                    if (lake.id === action.lake.id) {
+                        lake.bathymetry = action.data;
+                        break;
+                    }
+                }
             }
         }
         return {
             ...state,
-            bathymetries: bathymetries,
+            layers: layers,
+            lakes: lakes,
             error: ''
         };
     case GET_BATHYMETRY_FAIL:
+        return {
+            ...state,
+            error: action.error
+        };
+    case GET_LAKE_AREAS_OK:
+        lakes = null;
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            layers.push(state.layers[i]);
+            if (state.layers[i].name === 'Järvet') {
+                lakes = state.layers[i];
+                for (let i = 0; i < lakes.features.features.length; i++) {
+                    let lake = lakes.features.features[i];
+                    if (action.data[lake.id]) {
+                        lake.area = action.data[lake.id];
+                    }
+                }
+            }
+        }
+        return {
+            ...state,
+            layers: layers,
+            lakes: lakes,
+            error: ''
+        };
+    case GET_LAKE_AREAS_FAIL:
         return {
             ...state,
             error: action.error
@@ -269,16 +315,22 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SELECT_LAKE:
-        lakes = [];
-        for (let i = 0; i < state.lakes.length; i++) {
-            lakes.push(state.lakes[i]);
-            if (i === action.index) {
-                lakes[i].show_bathymetry = true;
+        let latlng = state.latlng;
+        lakes = null;
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            layers.push(state.layers[i]);
+            if (state.layers[i].name === 'Järvet') {
+                lakes = state.layers[i];
+                let lake = lakes.features.features[action.index];
+                lake.show_bathymetry = true;
+                latlng = [lake.geometry.coordinates[1], lake.geometry.coordinates[0]];
             }
         }
         newState = {
             ...state,
-            latlng: state.lakes[action.index].latlng,
+            latlng: latlng,
+            layers: layers,
             lakes: lakes,
             error: ''
         };
@@ -288,15 +340,19 @@ const initReducer = (state=initialState, action) => {
         }
         return newState;
     case UNSELECT_LAKE:
-        lakes = [];
-        for (let i = 0; i < state.lakes.length; i++) {
-            lakes.push(state.lakes[i]);
-            if (i === action.index) {
-                lakes[i].show_bathymetry = false;
+        lakes = null;
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            layers.push(state.layers[i]);
+            if (state.layers[i].name === 'Järvet') {
+                lakes = state.layers[i];
+                let lake = lakes.features.features[action.index];
+                lake.show_bathymetry = false;
             }
         }
         return {
             ...state,
+            layers: layers,
             lakes: lakes,
             error: ''
         };

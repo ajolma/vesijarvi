@@ -5,6 +5,7 @@
    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    id="OpenLayers_Geometry_Point_4958"
@@ -24,7 +25,7 @@
    stroke-linecap="butt"
    stroke-linejoin="round"
    version="1.1"
-   sodipodi:docname="hapettimet.svg"
+   sodipodi:docname="entinen-hapetin.svg"
    inkscape:version="0.92.3 (2405546, 2018-03-11)">
   <metadata
      id="metadata9">
@@ -34,11 +35,35 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
-     id="defs7" />
+     id="defs7">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient816">
+      <stop
+         style="stop-color:#1666ff;stop-opacity:1;"
+         offset="0"
+         id="stop812" />
+      <stop
+         style="stop-color:#1666ff;stop-opacity:0;"
+         offset="1"
+         id="stop814" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient816"
+       id="radialGradient818"
+       cx="0.5"
+       cy="0.5"
+       fx="0.5"
+       fy="0.5"
+       r="0.54166667"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
   <sodipodi:namedview
      pagecolor="#ffffff"
      bordercolor="#666666"
@@ -48,14 +73,14 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="953"
-     inkscape:window-height="555"
+     inkscape:window-width="866"
+     inkscape:window-height="794"
      id="namedview5"
      showgrid="false"
      inkscape:zoom="6.5555556"
-     inkscape:cx="4.9188766"
+     inkscape:cx="7.0282782"
      inkscape:cy="18"
-     inkscape:window-x="181"
+     inkscape:window-x="639"
      inkscape:window-y="20"
      inkscape:window-maximized="0"
      inkscape:current-layer="OpenLayers_Geometry_Point_4958" />
@@ -63,5 +88,5 @@
      points="1,0 0,0 0,1 1,1 "
      transform="matrix(1.4297533,1.3890129,-1.4297533,1.3890129,0.50536924,-0.8702246)"
      id="polygon2"
-     style="fill:#1666ff;fill-opacity:1" />
+     style="fill:url(#radialGradient818);fill-opacity:1;stroke-width:0.08333334;stroke-miterlimit:4;stroke-dasharray:0.08333334, 0.08333334000000001;stroke-dashoffset:0" />
 </svg>

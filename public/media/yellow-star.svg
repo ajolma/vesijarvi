@@ -7,38 +7,27 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   id="OpenLayers_Geometry_Point_4958"
-   cx="10"
-   cy="10"
-   r="1"
-   viewBox="-1 -1 3 3"
-   width="21"
-   height="21"
-   x="-8"
-   y="-8"
-   fill="blue"
-   fill-opacity="0.5"
-   stroke="black"
-   stroke-opacity="1"
-   stroke-width="0.08333333333333333"
-   stroke-linecap="butt"
-   stroke-linejoin="round"
+   width="255"
+   height="240"
+   viewBox="0 0 51 48"
    version="1.1"
-   sodipodi:docname="hapettimet.svg"
+   id="svg872"
+   sodipodi:docname="yellow-star.svg"
    inkscape:version="0.92.3 (2405546, 2018-03-11)">
   <metadata
-     id="metadata9">
+     id="metadata878">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Five Pointed Star</dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
-     id="defs7" />
+     id="defs876" />
   <sodipodi:namedview
      pagecolor="#ffffff"
      bordercolor="#666666"
@@ -48,20 +37,22 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="953"
-     inkscape:window-height="555"
-     id="namedview5"
+     inkscape:window-width="1189"
+     inkscape:window-height="668"
+     id="namedview874"
      showgrid="false"
-     inkscape:zoom="6.5555556"
-     inkscape:cx="4.9188766"
-     inkscape:cy="18"
-     inkscape:window-x="181"
-     inkscape:window-y="20"
+     inkscape:zoom="0.98333333"
+     inkscape:cx="-8.6440678"
+     inkscape:cy="120"
+     inkscape:window-x="99"
+     inkscape:window-y="201"
      inkscape:window-maximized="0"
-     inkscape:current-layer="OpenLayers_Geometry_Point_4958" />
-  <polygon
-     points="1,0 0,0 0,1 1,1 "
-     transform="matrix(1.4297533,1.3890129,-1.4297533,1.3890129,0.50536924,-0.8702246)"
-     id="polygon2"
-     style="fill:#1666ff;fill-opacity:1" />
+     inkscape:current-layer="svg872" />
+  <title
+     id="title868">Five Pointed Star</title>
+  <path
+     d="m 25,46.813559 -6,-17 H 1 l 14,-11 -5,-16.9999997 15,9.9999997 15,-9.9999997 -5,16.9999997 14,11 H 31 Z"
+     id="path870"
+     style="fill:#feff36;stroke:#000000;stroke-width:2.72000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;fill-opacity:1"
+     inkscape:connector-curvature="0" />
 </svg>

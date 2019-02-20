@@ -1,18 +1,20 @@
 import {server} from '../App';
 
+export const GET_POPUP_OK = 'GET_POPUP_OK';
+export const GET_POPUP_FAIL = 'GET_POPUP_FAIL';
 export const GET_LAYERS_OK = 'GET_LAYERS_OK';
 export const GET_LAYERS_FAIL = 'GET_LAYERS_FAIL';
 export const GET_FLAGS_OK = 'GET_FLAGS_OK';
 export const GET_FLAGS_FAIL = 'GET_FLAGS_FAIL';
 export const GET_OIKEUDET_OK = 'GET_OIKEUDET_OK';
 export const GET_OIKEUDET_FAIL = 'GET_OIKEUDET_FAIL';
-export const GET_LAKES_OK = 'GET_LAKES_OK';
-export const GET_LAKES_FAIL = 'GET_LAKES_FAIL';
 export const GET_BACKGROUND_OK = 'GET_BACKGROUND_OK';
 export const GET_BACKGROUND_FAIL = 'GET_BACKGROUND_FAIL';
 export const SELECT_BACKGROUND = 'SELECT_BACKGROUND';
 export const GET_BATHYMETRY_OK = 'GET_BATHYMETRY_OK';
 export const GET_BATHYMETRY_FAIL = 'GET_BATHYMETRY_FAIL';
+export const GET_LAKE_AREAS_OK = 'GET_LAKE_AREAS_OK';
+export const GET_LAKE_AREAS_FAIL = 'GET_LAKE_AREAS_FAIL';
 export const SHOW_LAYER = 'SHOW_LAYER';
 export const HIDE_LAYER = 'HIDE_LAYER';
 export const SHOW_ALL_LAYERS = 'SHOW_ALL_LAYERS';
@@ -21,9 +23,33 @@ export const UNSELECT_FEATURE = 'UNSELECT_FEATURE';
 export const SELECT_LAKE = 'SELECT_LAKE';
 export const UNSELECT_LAKE = 'UNSELECT_LAKE';
 
-export const getLayers = () => {
+export const getPopup = (set) => {
     return dispatch => {
-        let url = server + '/kohteet?request=tyypit&type=json';
+        let url = server + '/popup';
+        fetch(url)
+            .then((response) => { // 200-499
+                if (response.ok) {
+                    response.json()
+                        .then(data => {
+                            dispatch(getPopupOk(data));
+                            return data.length;
+                        })
+                        .catch(error => {
+                            dispatch(getPopupFail(error));
+                        });
+                } else {
+                    dispatch(getPopupFail(response.status));
+                }
+            })
+            .catch((error) => { // 500-599
+                dispatch(getPopupFail(error));
+            });
+    };
+};
+
+export const getLayers = (set) => {
+    return dispatch => {
+        let url = server + '/kohteet/' + set;
         fetch(url)
             .then((response) => { // 200-499
                 if (response.ok) {
@@ -69,7 +95,7 @@ export const getOikeudet = () => {
 
 export const getBathymetry = (lake) => {
     return dispatch => {
-        let url = server + '/lake/' + lake.syvyyskartta;
+        let url = server + '/kohteet/6/syvyyskartta=' + lake.properties.syvyyskartta;
         fetch(url).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
@@ -86,21 +112,21 @@ export const getBathymetry = (lake) => {
     };
 };
 
-export const getLakes = () => {
+export const getLakeAreas = () => {
     return dispatch => {
-        let url = server + '/lake';
+        let url = server + '/kohteet/4/21/jarvialueet';
         fetch(url).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
-                    dispatch(getLakesOk(data));
+                    dispatch(getLakeAreasOk(data));
                 }).catch(error => {
-                    dispatch(getLakesFail(error));
+                    dispatch(getLakeAreasFail(error));
                 });
             } else {
-                dispatch(getLakesFail(response.status));
+                dispatch(getLakeAreasFail(response.status));
             }
         }).catch((error) => { // 500-599
-            dispatch(getLakesFail(error));
+            dispatch(getLakeAreasFail(error));
         });
     };
 };
@@ -187,6 +213,20 @@ const sendFeedbackFail = (error) => {
 
 // Action creators
 
+export const getPopupOk = (data) => {
+    return {
+        type: GET_POPUP_OK,
+        data: data
+    };
+}
+
+export const getPopupFail = (error) => {
+    return {
+        type: GET_POPUP_FAIL,
+        error: error
+    };
+}
+
 export const getLayersOk = (data) => {
     return {
         type: GET_LAYERS_OK,
@@ -229,20 +269,6 @@ export const getFlagsFail = (error) => {
     };
 }
 
-export const getLakesOk = (data) => {
-    return {
-        type: GET_LAKES_OK,
-        data: data
-    };
-}
-
-export const getLakesFail = (error) => {
-    return {
-        type: GET_LAKES_FAIL,
-        error: error
-    };
-}
-
 export const getBackgroundOk = (data) => {
     return {
         type: GET_BACKGROUND_OK,
@@ -253,6 +279,19 @@ export const getBackgroundOk = (data) => {
 export const getBackgroundFail = (error) => {
     return {
         type: GET_BACKGROUND_FAIL,
+        error: error
+    };
+}
+
+export const getLakeAreasOk = (data) => {
+    return {
+        type: GET_LAKE_AREAS_OK,
+        data: data
+    };
+}
+export const getLakeAreasFail = (error) => {
+    return {
+        type: GET_LAKE_AREAS_FAIL,
         error: error
     };
 }

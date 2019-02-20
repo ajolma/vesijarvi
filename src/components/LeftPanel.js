@@ -61,10 +61,13 @@ class LeftPanel extends Component {
 
     handleClick2 = (e) => {
         let i = parseInt(e.target.id, 10);
-        if (this.props.layers[i].visible) {
-            this.props.dispatch(hideLayer(i));
-        } else {
-            this.props.dispatch(showLayer(i));
+        let layer = this.props.layers[i];
+        if (layer) {
+            if (this.props.layers[i].visible) {
+                this.props.dispatch(hideLayer(i));
+            } else {
+                this.props.dispatch(showLayer(i));
+            }
         }
     }
 
@@ -96,29 +99,33 @@ class LeftPanel extends Component {
             let latlng = feature.latlng;
             L.popup()
                 .setLatLng(latlng)
-                .setContent(popupHtml(feature))
+                .setContent(popupHtml(this.props.popup, feature))
                 .openOn(mapsPlaceHolder[0]);
             this.props.dispatch(selectFeature(index));
+            e.target.value = '';
         }
     }
 
-    selectLake = (e) => {
+    onClickOnLake = (e) => {
         let index = parseInt(e.target.id, 10);
-        let lake = this.props.lakes[index];
-        if (lake.show_bathymetry) {
-            this.props.dispatch(unselectLake(index));
-            closePopups();
+        let lake = this.props.lakes.features.features[index];
+        if (!lake) {
+            console.log('click on lake', index, this.props.lakes.features.features);
         } else {
-            let bathymetry = this.props.bathymetries[index];
-            if (lake.syvyyskartta && !bathymetry) {
-                this.props.dispatch(getBathymetry(lake));
+            if (lake.show_bathymetry) {
+                this.props.dispatch(unselectLake(index));
+                closePopups();
+            } else {
+                if (!lake.bathymetry) {
+                    this.props.dispatch(getBathymetry(lake));
+                }
+                let latlng = [lake.geometry.coordinates[1], lake.geometry.coordinates[0]];
+                L.popup()
+                    .setLatLng(latlng)
+                    .setContent(popupHtml(this.props.popup, lake))
+                    .openOn(mapsPlaceHolder[0]);
+                this.props.dispatch(selectLake(index));
             }
-            let latlng = lake.latlng;
-            L.popup()
-                .setLatLng(latlng)
-                .setContent(popupHtml({properties: lake}))
-                .openOn(mapsPlaceHolder[0]);
-            this.props.dispatch(selectLake(index));
         }
     }
 
@@ -126,12 +133,22 @@ class LeftPanel extends Component {
 
     handleFeedback = () => {
         const {topic, name, email, feedback} = this.state;
+        if (feedback.length < 4) {
+            alert("Kirjoita palautetta, ole hyvä!");
+            return;
+        }
         this.props.dispatch(sendFeedback({
             topic: topic,
             name: name,
             email: email,
             feedback: feedback
         }));
+        this.setState({
+            topic: '',
+            name: '',
+            email: '',
+            feedback: ''
+        });
     }
 
     render() {
@@ -148,15 +165,23 @@ class LeftPanel extends Component {
             let w = layer.graphic_width;
             let name = layer.name;
             if (layer.visible) {
-                imgUrl = '/media/' + layer.legend;
+                if (layer.legend) {
+                    imgUrl = 'media/' + layer.legend;
+                } else {
+                    imgUrl = 'media/red-circle.svg';
+                }
                 name = <span id={i} className="">{name}</span>;
             } else {
-                imgUrl = '/media/' + layer.legend_hidden;
+                if (layer.legend_hidden) {
+                    imgUrl = 'media/' + layer.legend_hidden;
+                } else {
+                    imgUrl = 'media/grey-circle.svg';
+                }
                 name = <span id={i} className="hidden-layer-name">{name}</span>;
             }
             let div =
                 <div key={i} onClick={this.onLayerClick} id={i} style={{cursor: 'pointer'}}>
-                    <img alt="" src={imgUrl} height={h} width={w}/> {name}
+                    <img alt="" src={imgUrl} height={h} width={w} onClick={this.onLayerClick} id={i}/> {name}
                 </div>;
             switch (layer.leaf) {
             case 1:
@@ -186,11 +211,11 @@ class LeftPanel extends Component {
             let name = bg.otsikko;
             let kuvaus = bg.kuvaus;
             if (bg.visible) {
-                imgUrl = '/media/red-circle.svg';
+                imgUrl = 'media/red-circle.svg';
                 name = <span id={i} className="">{name}</span>;
                 kuvaus = <div id={i} className="layer-description">{kuvaus}</div>;
             } else {
-                imgUrl = '/media/grey-circle.svg';
+                imgUrl = 'media/grey-circle.svg';
                 name = <span id={i} className="hidden-layer-name">{name}</span>;
                 kuvaus = <div id={i} className="layer-description-hidden">{kuvaus}</div>;
             }
@@ -205,18 +230,23 @@ class LeftPanel extends Component {
         let extras = [];
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (!(layer.leaf === 4 || layer.leaf === 5)) {
+            if (layer.leaf < 4) {
                 continue;
             }
             let imgUrl;
             let name = layer.name;
             let kuvaus = layer.kuvaus;
             if (layer.visible) {
-                imgUrl = '/media/red-circle.svg';
+                imgUrl = 'media/red-circle.svg';
                 name = <span id={i} className="">{name}</span>;
-                kuvaus = <div id={i} className="layer-description">{kuvaus}</div>;
+                let x = '';
+                if (layer.legend) {
+                    let xUrl = 'media/' + layer.legend;
+                    x = <img alt="" src={xUrl} height={layer.graphic_height} width={layer.graphic_width}/>;
+                }
+                kuvaus = <div id={i} className="layer-description">{kuvaus}{x}</div>;
             } else {
-                imgUrl = '/media/grey-circle.svg';
+                imgUrl = 'media/grey-circle.svg';
                 name = <span id={i} className="hidden-layer-name">{name}</span>;
                 kuvaus = <div id={i} className="layer-description-hidden">{kuvaus}</div>;
             }
@@ -228,28 +258,28 @@ class LeftPanel extends Component {
             );
         }
 
-        let lakes = [];
+        let bathymetries = [];
         if (this.props.lakes) {
-            for (let i = 0; i < this.props.lakes.length; i++) {
-                let lake = this.props.lakes[i];
-                if (!lake.syvyyskartta) {
+            for (let i = 0; i < this.props.lakes.features.features.length; i++) {
+                let lake = this.props.lakes.features.features[i];
+                if (!lake.properties.syvyyskartta) {
                     continue;
                 }
                 let imgUrl;
-                let name = lake.nimi;
+                let name = lake.properties.nimi;
                 let bathy = '';
                 if (lake.show_bathymetry) {
-                    imgUrl = '/media/red-circle.svg';
+                    imgUrl = 'media/red-circle.svg';
                     name = <span id={i} className="">{name}</span>;
-                    bathy = '/media/' + lake.syvyyskartta + '.png';
+                    bathy = 'media/' + lake.properties.syvyyskartta + '.png';
                     bathy = <img className="layer-description" alt="" src={bathy}/>;
                 } else {
-                    imgUrl = '/media/grey-circle.svg';
+                    imgUrl = 'media/grey-circle.svg';
                     name = <span id={i} className="hidden-layer-name">{name}</span>;
                 }
-                lakes.push(
-                    <div key={i} onClick={this.selectLake} id={i} style={{cursor: 'pointer'}}>
-                        <img alt="" src={imgUrl} height="21" width="21"/> {name} <br/>
+                bathymetries.push(
+                    <div key={i} onClick={this.onClickOnLake} id={i} style={{cursor: 'pointer'}}>
+                        <img id={i} alt="" src={imgUrl} height="21" width="21"/> {name} <br/>
                         {bathy}
                     </div>
                 );
@@ -369,7 +399,7 @@ class LeftPanel extends Component {
                     </Accordion.Title>
                     <Accordion.Content active={isActive[1]}>
                         <div className="left-para">
-                            {lakes}
+                            {bathymetries}
                         </div>
                     </Accordion.Content>
 
@@ -477,13 +507,12 @@ class LeftPanel extends Component {
 
 const mapStateToProps = (state) => {
     return {
+        popup: state.init.popup,
         layers: state.init.layers,
         features: state.init.features,
-        styles: state.init.styles,
         lakes: state.init.lakes,
         backgrounds: state.init.backgrounds,
         flags: state.init.flags,
-        bathymetries: state.init.bathymetries,
         oikeudet: state.init.oikeudet,
         error: state.init.error
     };

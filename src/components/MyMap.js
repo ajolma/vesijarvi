@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import {connect} from 'react-redux';
-import {Map, TileLayer, GeoJSON, Polygon, Polyline, Tooltip} from 'react-leaflet';
+import {Map, TileLayer, GeoJSON,
+        Polygon, Polyline, Tooltip, ScaleControl} from 'react-leaflet';
+import L from 'leaflet';
+import {mapsPlaceHolder} from '../index.js';
 import './MyMap.css';
 
 var protocol = 'https';
@@ -20,11 +23,11 @@ function element(tag, attrs, text) {
         return '<'+tag+a+'/>';
 }
 
-function paragraph(t) {
+function paragraph(h, t) {
     if (!t) {
         return '';
     }
-    return '<p>' + t + '</p>';
+    return '<p><b>' + h +'</b>' + t + '</p>';
 }
 
 function kuvatHTML(kuvat) {
@@ -49,13 +52,16 @@ function kuvatHTML(kuvat) {
         if (/mp4/.test(name)) {
             poster = name.match(/(\w+).mp4$/);
             let attrs = {
-                width:270,
-                height:200,
-                controls:true,
+                width: 270,
+                height: 200,
+                controls: true,
+                preload: "none",
                 poster: mediaURL + poster[1] + '.jpeg'
             };
             //attrs.autoplay = 'autoplay';
-            html += element('video', attrs, element('source', {src:src, type:'video/mp4'})) +
+            html += element('video',
+                            attrs,
+                            element('source', {src:src, type:'video/mp4'})) +
                 'Videon lataus voi kestää hetken.';
             //html += ' Se käynnistyy automaattisesti latauduttuaan.';
         } else {
@@ -65,14 +71,26 @@ function kuvatHTML(kuvat) {
     return html;
 }
 
-export const popupHtml = (feature, layer) => {
-    return '<h3>'+feature.properties.nimi+'</h3>' +
-        paragraph(feature.properties.kohdetyyppi) +
-        paragraph(feature.properties.kuvaus) +
-        kuvatHTML(feature.properties.kuvat);
+export const popupHtml = (popup, feature, layer) => {
+    let html = '<h3>' + feature.properties.nimi + '</h3>';
+    for (let i = 0; i < popup.length; i++) {
+        if (popup[i].otsikko === 'kuvat') {
+            html += kuvatHTML(feature.properties.kuvat);
+        } else {
+            html += paragraph(popup[i].otsikko + ': ', feature.properties[popup[i].sarake]);
+        }
+    }
+    return html;
 };
 
 let map = null;
+let my_map = null;
+
+function onEachFeature(feature, layer) {
+    if (my_map) {
+        layer.bindPopup(popupHtml(my_map.props.popup, feature, layer));
+    }
+}
 
 export function getMapZoom() {
     return map && map.leafletElement.getZoom();
@@ -87,13 +105,32 @@ class MyMap extends Component {
     constructor(props) {
         super(props);
         this.state = {};
+        my_map = this;
     }
 
-    onEachFeature(feature, layer) {
-        layer.bindPopup(popupHtml(feature, layer));
-    }
+    initialized = false;
 
     render() {
+
+        if (this.props.layers.length === 0) {
+            if (map !== null) {
+                let msg = '<img src="media/loading.gif" width="64" height="64"/>';
+                L.popup({closeButton: false})
+                    .setLatLng(this.props.latlng)
+                    .setContent(msg)
+                    .openOn(mapsPlaceHolder[0]);
+            }
+        } else if (!this.initialized) {
+            closePopups();
+            this.initialized = true;
+        }
+
+        if (map) {
+            map.leafletElement.on('zoomstart', function() {
+                //console.log('zoom is ', getMapZoom());
+            });
+        }
+        
         let key = 1;
         let overlays = [];
         for (let i = 0; i < this.props.backgrounds.length; i++) {
@@ -121,33 +158,35 @@ class MyMap extends Component {
             }
             key++;
         }
-        for (let i = 0; i < this.props.lakes.length; i++) {
-            if (this.props.bathymetries[i]) {
-                let f = this.props.bathymetries[i];
-                for (let k = 0; k < f.length; k++) {
-                    let ps = f[k];
-                    let polygon = [];
-                    for (let j = 0; j < ps.length; j++) {
-                        polygon.push(ps[j]);
-                    }
-                    if (this.props.lakes[i].show_bathymetry) {
+        if (this.props.lakes) {
+            for (let i = 0; i < this.props.lakes.features.features.length; i++) {
+                let lake = this.props.lakes.features.features[i];
+                if (lake.bathymetry && lake.show_bathymetry) {
+                    let fill_opacity = lake.properties.fill_opacity;
+                    let stroke = false;
+                    for (let k = 0; k < lake.bathymetry.length; k++) {
+                        let ps = lake.bathymetry[k];
+                        let polygon = [];
+                        for (let j = 0; j < ps.length; j++) {
+                            polygon.push(ps[j]);
+                        }
                         overlays.push(<Polygon key={key}
                                                fillColor="blue"
-                                               fillOpacity="0.3"
-                                               stroke="false"
-                                               opacity="0.15"
+                                               fillOpacity={fill_opacity}
+                                               stroke={stroke}
+                                               opacity={fill_opacity}
                                                positions={polygon} />);
+                        key++;
                     }
-                    key++;
                 }
-            } else {
-                key += 40;
             }
+        } else {
+            key += 20*40;
         }
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
             if (layer.leaf === 5 && layer.visible && layer.table.substr(0, 4) !== 'http') {
-                if (layer.table === 'uomat') {
+                if (layer.geometry_type === 'Polyline') {
                     let c = layer.features.coordinates;
                     let p = layer.features.properties;
                     if (c) {
@@ -170,7 +209,7 @@ class MyMap extends Component {
                             key++;
                         }
                     }
-                } else {
+                } else if (layer.geometry_type === 'Polygon') {
                     let c = layer.features.coordinates;
                     let p = layer.features.properties;
                     if (c) {
@@ -180,30 +219,25 @@ class MyMap extends Component {
                             for (let j = 0; j < ps.length; j++) {
                                 polygon.push(ps[j]);
                             }
+                            let tooltip = '';
                             if (p[k].nimi) {
-                                overlays.push(
-                                    <Polygon key={key}
-                                             fillColor={layer.fill_color}
-                                             fillOpacity={layer.fill_opacity}
-                                             stroke="true"
-                                             color={layer.stroke_color}
-                                             weight={layer.stroke_width}
-                                             opacity={layer.opacity}
-                                             positions={polygon}>
-                                        <Tooltip>{p[k].nimi}</Tooltip>
-                                    </Polygon>);
-                            } else {
-                                overlays.push(
-                                    <Polygon key={key}
-                                             fillColor={layer.fill_color}
-                                             fillOpacity={layer.fill_opacity}
-                                             stroke="true"
-                                             color={layer.stroke_color}
-                                             weight={layer.stroke_width}
-                                             opacity={layer.opacity}
-                                             positions={polygon}>
-                                    </Polygon>);
+                                tooltip = <Tooltip>{p[k].nimi}</Tooltip>;
                             }
+                            let fill_color = layer.fill_color;
+                            if (p[k].fill_color) {
+                                fill_color = p[k].fill_color;
+                            }
+                            overlays.push(
+                                <Polygon key={key}
+                                         fillColor={fill_color}
+                                         fillOpacity={layer.fill_opacity}
+                                         stroke="true"
+                                         color={layer.stroke_color}
+                                         weight={layer.stroke_width}
+                                         opacity={layer.opacity}
+                                         positions={polygon}>
+                                    {tooltip}
+                                </Polygon>);
                             key++;
                         }
                     }
@@ -222,19 +256,21 @@ class MyMap extends Component {
                 overlays.push(
                     <GeoJSON key={key}
                              data={features}
-                             pointToLayer={this.props.styles[i]}
-                             onEachFeature={this.onEachFeature}>
+                             pointToLayer={layer.style}
+                             onEachFeature={onEachFeature}>
                     </GeoJSON>
                 );
             }
             key++;
         }
         return (
-            <Map
-                ref={(ref) => {map = ref;}}
-                center={this.props.latlng} 
-                zoom={this.props.zoom} >
-                {overlays}
+            <Map ref={(ref) => {map = ref;}}
+                 center={this.props.latlng} 
+                 zoom={this.props.zoom} 
+                 minZoom="9"
+                 maxZoom="17">
+                 {overlays}                                  
+                 <ScaleControl imperial="false"/>
             </Map>
         );
     }
@@ -244,11 +280,10 @@ const mapStateToProps = (state) => {
     return {
         latlng: state.init.latlng,
         zoom: state.init.zoom,
+        popup: state.init.popup,
         layers: state.init.layers,
         features: state.init.features,
         selected_feature: state.init.selected_feature,
-        styles: state.init.styles,
-        bathymetries: state.init.bathymetries,
         lakes: state.init.lakes,
         backgrounds: state.init.backgrounds,
         error: state.init.error
