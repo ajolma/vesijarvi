@@ -17,6 +17,8 @@ export const GET_LAKE_AREAS_OK = 'GET_LAKE_AREAS_OK';
 export const GET_LAKE_AREAS_FAIL = 'GET_LAKE_AREAS_FAIL';
 export const SHOW_LAYER = 'SHOW_LAYER';
 export const HIDE_LAYER = 'HIDE_LAYER';
+export const HIDE_LEAF = 'HIDE_LEAF';
+export const SHOW_LEAF = 'SHOW_LEAF';
 export const SHOW_ALL_LAYERS = 'SHOW_ALL_LAYERS';
 export const SELECT_FEATURE = 'SELECT_FEATURE';
 export const UNSELECT_FEATURE = 'UNSELECT_FEATURE';
@@ -329,6 +331,20 @@ export const hideLayer = (index) => {
     return {
         type: HIDE_LAYER,
         index: index
+    };
+}
+
+export const showLeaf = (leaf) => {
+    return {
+        type: SHOW_LEAF,
+        leaf: leaf
+    };
+}
+
+export const hideLeaf = (leaf) => {
+    return {
+        type: HIDE_LEAF,
+        leaf: leaf
     };
 }
 

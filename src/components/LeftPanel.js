@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button } from 'semantic-ui-react';
 import {connect} from 'react-redux';
-import {hideLayer, showLayer,
+import {hideLayer, showLayer, hideLeaf, showLeaf,
         selectFeature,
         selectLake, unselectLake,
         selectBackground,
@@ -53,6 +53,7 @@ class LeftPanel extends Component {
                 newActive.push(active[i]);
             }
         }
+        console.log(newIndex, newActive);
         this.setState({
             active: newActive,
             activeIndex: newIndex
@@ -79,11 +80,18 @@ class LeftPanel extends Component {
     }
 
     onLayerClick = (e) => {
+        console.log(e);
         if (e.target.id === '') {
             return;
         }
         let index = parseInt(e.target.id, 10);
-        if (this.props.layers[index].visible) {
+        if (index < 0) {
+            if (index < -100) {
+                this.props.dispatch(showLeaf(-(100+index)));
+            } else {
+                this.props.dispatch(hideLeaf(-index));
+            }
+        } else if (this.props.layers[index].visible) {
             this.props.dispatch(hideLayer(index));
         } else {
             this.props.dispatch(showLayer(index));
@@ -152,49 +160,97 @@ class LeftPanel extends Component {
     }
 
     render() {
-        let catchment_activities = [];
-        let lake_activities = [];
-        let seurannat = [];
+        let leafs = {
+            1: {
+                layers: [],
+                title: 'Valuma-aluetoimenpiteet',
+                hidden: true
+            },
+            2: {
+                layers: [],
+                title: 'Vesistötoimenpiteet',
+                hidden: true
+            },
+            3: {
+                layers: [],
+                title: 'Seurannat',
+                hidden: true
+            },
+            4: {
+                layers: [],
+                title: 'Lisätasot',
+                hidden: true
+            }
+        };
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
             if (!layer.features || layer.features.totalFeatures === 0) {
                 continue;
             }
-            let imgUrl;
+            let leaf = layer.leaf;
+            let legend = layer.legend;
             let h = layer.graphic_height;
             let w = layer.graphic_width;
-            let name = layer.name;
-            if (layer.visible) {
-                if (layer.legend) {
-                    imgUrl = 'media/' + layer.legend;
-                } else {
-                    imgUrl = 'media/red-circle.svg';
+            let x = '', kuvaus = '', xclass = '', ximg = '';
+            if (leaf >= 1 && leaf <= 3) {
+            } else if (leaf >= 4 && leaf <= 5) {
+                leaf = 4;
+                if (layer.visible && legend) {
+                    let url = 'media/' + legend;
+                    ximg = <img alt="" src={url} height={h} width={w} id={i}/>;
                 }
-                name = <span id={i} className="">{name}</span>;
+                legend = null;
+                x = <br/>;
             } else {
-                if (layer.legend_hidden) {
-                    imgUrl = 'media/' + layer.legend_hidden;
-                } else {
-                    imgUrl = 'media/grey-circle.svg';
-                }
-                name = <span id={i} className="hidden-layer-name">{name}</span>;
+                continue;
             }
+            if (layer.visible) {
+                leafs[leaf].hidden = false;
+            } else {
+                if (legend) {
+                    legend = layer.legend_hidden;
+                }
+                xclass = '-hidden';
+            }
+            if (!legend) {
+                if (layer.visible) {
+                    legend = 'red-circle.svg';
+                } else {
+                    legend = 'grey-circle.svg';
+                }
+                h = 21;
+                w = 21;
+            }
+            if (leaf > 3) {
+                let class_name = 'layer-description'+xclass;
+                kuvaus = <div id={i} className={class_name}>{layer.kuvaus}{ximg}</div>;
+            }
+            let url = 'media/' + legend;
+            let img = <img alt="" src={url} height={h} width={w} id={i}/>;
+            let class_name = 'layer-name'+xclass;
+            let name = <span id={i} className={class_name}>{layer.name}</span>;
             let div =
                 <div key={i} onClick={this.onLayerClick} id={i} style={{cursor: 'pointer'}}>
-                    <img alt="" src={imgUrl} height={h} width={w} onClick={this.onLayerClick} id={i}/> {name}
+                    {img} {name} {x} {kuvaus}
                 </div>;
-            switch (layer.leaf) {
-            case 1:
-                catchment_activities.push(div);
-                break;
-            case 2:
-                lake_activities.push(div);
-                break;
-            case 3:
-                seurannat.push(div);
-                break;
-            default:
+            leafs[leaf].layers.push(div);
+        }
+        for (let leaf = 1; leaf < 5; leaf++) {
+            let imgUrl, name, id;
+            if (leafs[leaf].hidden) {
+                id = -100-leaf;
+                imgUrl = 'media/yes.svg';
+                name = <span id={id} className="">Näytä kaikki {leafs[leaf].title.toLowerCase()}</span>;
+            } else {
+                imgUrl = 'media/no.svg';
+                id = -leaf;
+                name = <span id={id} className="">Piilota kaikki {leafs[leaf].title.toLowerCase()}</span>;
             }
+            let div =
+                <div key={id} onClick={this.onLayerClick} id={id} style={{cursor: 'pointer'}}>
+                    <img alt="" src={imgUrl} height={21} width={21} id={id}/> {name}
+                </div>;
+            leafs[leaf].layers.unshift(div);
         }
 
         let datalist = [];
@@ -221,37 +277,6 @@ class LeftPanel extends Component {
             }
             bgmaps.push(
                 <div key={i} onClick={this.selectBackground} id={i} style={{cursor: 'pointer'}}>
-                    <img alt="" src={imgUrl} height="21" width="21"/> {name} <br/>
-                    {kuvaus}
-                </div>
-            );
-        }
-
-        let extras = [];
-        for (let i = 0; i < this.props.layers.length; i++) {
-            let layer = this.props.layers[i];
-            if (layer.leaf < 4) {
-                continue;
-            }
-            let imgUrl;
-            let name = layer.name;
-            let kuvaus = layer.kuvaus;
-            if (layer.visible) {
-                imgUrl = 'media/red-circle.svg';
-                name = <span id={i} className="">{name}</span>;
-                let x = '';
-                if (layer.legend) {
-                    let xUrl = 'media/' + layer.legend;
-                    x = <img alt="" src={xUrl} height={layer.graphic_height} width={layer.graphic_width}/>;
-                }
-                kuvaus = <div id={i} className="layer-description">{kuvaus}{x}</div>;
-            } else {
-                imgUrl = 'media/grey-circle.svg';
-                name = <span id={i} className="hidden-layer-name">{name}</span>;
-                kuvaus = <div id={i} className="layer-description-hidden">{kuvaus}</div>;
-            }
-            extras.push(
-                <div key={i} onClick={this.handleClick2} id={i} style={{cursor: 'pointer'}}>
                     <img alt="" src={imgUrl} height="21" width="21"/> {name} <br/>
                     {kuvaus}
                 </div>
@@ -405,41 +430,41 @@ class LeftPanel extends Component {
 
                     <Accordion.Title active={isActive[2]} index={2} onClick={this.handleClick}>
                         <Icon name='dropdown' />
-                        <Label color={color[2]}>Lisätasot</Label>
+                        <Label color={color[2]}>{leafs[4].title}</Label>
                     </Accordion.Title>
                     <Accordion.Content active={isActive[2]}>
                         <div className="left-para">
-                            {extras}
+                            {leafs[4].layers}
                         </div>
                     </Accordion.Content>
 
                     <Accordion.Title active={isActive[3]} index={3} onClick={this.handleClick}>
                         <Icon name='dropdown' />
-                        <Label color={color[3]}>Seurannat</Label>
+                        <Label color={color[3]}>{leafs[3].title}</Label>
                     </Accordion.Title>
                     <Accordion.Content active={isActive[3]}>
                         <div className="left-para">
-                            {seurannat}
+                            {leafs[3].layers}
                         </div>
                     </Accordion.Content>
 
                     <Accordion.Title active={isActive[4]} index={4} onClick={this.handleClick}>
                         <Icon name='dropdown' />
-                        <Label color={color[4]}>Valuma-aluetoimenpiteet</Label>
+                        <Label color={color[4]}>{leafs[1].title}</Label>
                     </Accordion.Title>
                     <Accordion.Content active={isActive[4]}>
                         <div className="left-para">
-                            {catchment_activities}
+                            {leafs[1].layers}
                         </div>
                     </Accordion.Content>
 
                     <Accordion.Title active={isActive[5]} index={5} onClick={this.handleClick}>
                         <Icon name='dropdown' />
-                        <Label color={color[5]}>Vesistötoimenpiteet</Label>
+                        <Label color={color[5]}>{leafs[2].title}</Label>
                     </Accordion.Title>
                     <Accordion.Content active={isActive[5]}>
                         <div className="left-para">
-                            {lake_activities}
+                            {leafs[2].layers}
                         </div>
                     </Accordion.Content>
 

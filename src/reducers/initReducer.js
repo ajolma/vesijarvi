@@ -19,6 +19,8 @@ import {
     GET_LAKE_AREAS_FAIL,
     SHOW_LAYER,
     HIDE_LAYER,
+    SHOW_LEAF,
+    HIDE_LEAF,
     SHOW_ALL_LAYERS,
     SELECT_FEATURE,
     UNSELECT_FEATURE,
@@ -107,6 +109,9 @@ const initReducer = (state=initialState, action) => {
             }
         }
         layers.sort(function(a, b) {
+            if (a.taso && b.taso) {
+                return a.taso - b.taso;
+            }
             let n = a.name;
             if (typeof n === 'undefined') {
                 n = '';
@@ -275,6 +280,38 @@ const initReducer = (state=initialState, action) => {
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
             if (i === action.index) {
+                layer.visible = false;
+            }
+            layers.push(layer);
+        }
+        return {
+            ...state,
+            layers: layers,
+            error: ''
+        };
+    case SHOW_LEAF:
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            let layer = state.layers[i];
+            if (action.leaf === 4 && layer.leaf >= 4) {
+                layer.visible = true;
+            } else if (layer.leaf === action.leaf) {
+                layer.visible = true;
+            }
+            layers.push(layer);
+        }
+        return {
+            ...state,
+            layers: layers,
+            error: ''
+        };
+    case HIDE_LEAF:
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            let layer = state.layers[i];
+            if (action.leaf === 4 && layer.leaf >= 4) {
+                layer.visible = false;
+            } else if (layer.leaf === action.leaf) {
                 layer.visible = false;
             }
             layers.push(layer);

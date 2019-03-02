@@ -6,10 +6,6 @@ import L from 'leaflet';
 import {mapsPlaceHolder} from '../index.js';
 import './MyMap.css';
 
-var protocol = 'https';
-var server = 'biwatech.com';
-var mediaURL = protocol + '://' + server + '/Vj/media/';
-
 function element(tag, attrs, text) {
     var a = '';
     for (var key in attrs) {
@@ -46,7 +42,7 @@ function kuvatHTML(kuvat) {
         if (name.substring(0,7) === "http://") {
             src = name;
         } else {
-            src = mediaURL + name;
+            src = 'media/' + name;
         }
 
         if (/mp4/.test(name)) {
@@ -56,7 +52,7 @@ function kuvatHTML(kuvat) {
                 height: 200,
                 controls: true,
                 preload: "none",
-                poster: mediaURL + poster[1] + '.jpeg'
+                poster: 'media/' + poster[1] + '.jpeg'
             };
             //attrs.autoplay = 'autoplay';
             html += element('video',

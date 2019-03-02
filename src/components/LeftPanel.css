@@ -17,7 +17,11 @@
      margin: 0px 0px 0px 0px;
 }
 
-.hidden-layer-name {
+.layer-name {
+    color: black;
+}
+
+.layer-name-hidden {
     color: gray;
 }
 
