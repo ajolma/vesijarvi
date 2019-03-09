@@ -7,25 +7,25 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   version="1.0"
-   width="200"
-   height="200"
-   id="svg4"
-   sodipodi:docname="laskeutusaltaat.svg"
+   viewBox="0 0 48 48"
+   version="1.1"
+   id="svg10"
+   sodipodi:docname="jarvet-hidden.svg"
    inkscape:version="0.92.3 (2405546, 2018-03-11)">
   <metadata
-     id="metadata10">
+     id="metadata16">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
   <defs
-     id="defs8" />
+     id="defs14" />
   <sodipodi:namedview
      pagecolor="#ffffff"
      bordercolor="#666666"
@@ -35,24 +35,34 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1021"
-     inkscape:window-height="685"
-     id="namedview6"
+     inkscape:window-width="976"
+     inkscape:window-height="629"
+     id="namedview12"
      showgrid="false"
-     inkscape:zoom="1.18"
-     inkscape:cx="76.271186"
-     inkscape:cy="100"
-     inkscape:window-x="155"
-     inkscape:window-y="290"
+     inkscape:zoom="4.9166667"
+     inkscape:cx="18.305085"
+     inkscape:cy="24"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
-     inkscape:current-layer="svg4" />
+     inkscape:current-layer="svg10" />
   <circle
-     cx="100"
-     cy="100"
-     r="88"
-     fill="none"
-     stroke="#ff7f00"
-     stroke-width="15px"
+     cy="24"
+     cx="24"
+     r="24"
+     fill="#36c"
      id="circle2"
-     style="fill:#ff0000;fill-opacity:1;stroke:#090100;stroke-opacity:1" />
+     style="fill:#c8c8c8;fill-opacity:1" />
+  <g
+     fill="#fff"
+     id="g8">
+    <circle
+       cx="24"
+       cy="11.6"
+       r="4.7"
+       id="circle4" />
+    <path
+       d="m17.4 18.8v2.15h1.13c2.26 0 2.26 1.38 2.26 1.38v15.1s0 1.38-2.26 1.38h-1.13v2.08h14.2v-2.08h-1.13c-2.26 0-2.26-1.38-2.26-1.38v-18.6"
+       id="path6" />
+  </g>
 </svg>

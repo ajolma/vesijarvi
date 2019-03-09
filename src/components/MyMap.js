@@ -142,7 +142,7 @@ class MyMap extends Component {
         key++;
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.leaf === 5 && layer.visible && layer.table.substr(0, 4) === 'http') {
+            if (layer.visible && layer.table.substr(0, 4) === 'http') {
                 overlays.push(
                     <TileLayer
                         key={key}
@@ -181,7 +181,7 @@ class MyMap extends Component {
         }
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.leaf === 5 && layer.visible && layer.table.substr(0, 4) !== 'http') {
+            if (layer.visible && layer.table.substr(0, 4) !== 'http') {
                 if (layer.geometry_type === 'Polyline') {
                     let c = layer.features.coordinates;
                     let p = layer.features.properties;
@@ -245,7 +245,7 @@ class MyMap extends Component {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
             let features = layer.features;
-            if (layer.leaf < 5
+            if (layer.geometry_type === 'Point'
                 && features.totalFeatures > 0
                 && layer.visible
                 && features.features) {
@@ -264,7 +264,7 @@ class MyMap extends Component {
                  center={this.props.latlng} 
                  zoom={this.props.zoom} 
                  minZoom="9"
-                 maxZoom="17">
+                 maxZoom="18">
                  {overlays}                                  
                  <ScaleControl imperial="false"/>
             </Map>
@@ -278,9 +278,9 @@ const mapStateToProps = (state) => {
         zoom: state.init.zoom,
         popup: state.init.popup,
         layers: state.init.layers,
+        lakes: state.init.lakes,
         features: state.init.features,
         selected_feature: state.init.selected_feature,
-        lakes: state.init.lakes,
         backgrounds: state.init.backgrounds,
         error: state.init.error
     };

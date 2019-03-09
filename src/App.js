@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
 import {connect} from 'react-redux';
-import {getPopup, getLayers, getOikeudet, getBackground, getFlags} from './actions/initAction';
+import {getLeafs, getPopup, getLayers, getOikeudet, getBackground, getFlags} from './actions/initAction';
 import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
@@ -11,6 +11,7 @@ export const server = 'https://biwatech.com/vj2';
 class App extends Component {
 
     componentDidMount() {
+        this.props.dispatch(getLeafs());
         this.props.dispatch(getPopup());
         this.props.dispatch(getBackground());
         this.props.dispatch(getLayers(1));

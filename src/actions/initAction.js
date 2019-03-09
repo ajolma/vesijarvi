@@ -1,5 +1,7 @@
 import {server} from '../App';
 
+export const GET_LEAFS_OK = 'GET_LEAFS_OK';
+export const GET_LEAFS_FAIL = 'GET_LEAFS_FAIL';
 export const GET_POPUP_OK = 'GET_POPUP_OK';
 export const GET_POPUP_FAIL = 'GET_POPUP_FAIL';
 export const GET_LAYERS_OK = 'GET_LAYERS_OK';
@@ -24,8 +26,33 @@ export const SELECT_FEATURE = 'SELECT_FEATURE';
 export const UNSELECT_FEATURE = 'UNSELECT_FEATURE';
 export const SELECT_LAKE = 'SELECT_LAKE';
 export const UNSELECT_LAKE = 'UNSELECT_LAKE';
+export const SET_ZOOM = 'SET_ZOOM';
 
-export const getPopup = (set) => {
+export const getLeafs = () => {
+    return dispatch => {
+        let url = server + '/leafs';
+        fetch(url)
+            .then((response) => { // 200-499
+                if (response.ok) {
+                    response.json()
+                        .then(data => {
+                            dispatch(getLeafsOk(data));
+                            return data.length;
+                        })
+                        .catch(error => {
+                            dispatch(getLeafsFail(error));
+                        });
+                } else {
+                    dispatch(getLeafsFail(response.status));
+                }
+            })
+            .catch((error) => { // 500-599
+                dispatch(getLeafsFail(error));
+            });
+    };
+};
+
+export const getPopup = () => {
     return dispatch => {
         let url = server + '/popup';
         fetch(url)
@@ -215,6 +242,20 @@ const sendFeedbackFail = (error) => {
 
 // Action creators
 
+export const getLeafsOk = (data) => {
+    return {
+        type: GET_LEAFS_OK,
+        data: data
+    };
+}
+
+export const getLeafsFail = (error) => {
+    return {
+        type: GET_LEAFS_FAIL,
+        error: error
+    };
+}
+
 export const getPopupOk = (data) => {
     return {
         type: GET_POPUP_OK,
@@ -378,5 +419,12 @@ export const unselectLake = (index) => {
     return {
         type: UNSELECT_LAKE,
         index: index
+    };
+}
+
+export const setZoom = (level) => {
+    return {
+        type: SET_ZOOM,
+        level: level
     };
 }

@@ -11,7 +11,7 @@
    width="200"
    height="200"
    id="svg4"
-   sodipodi:docname="laskeutusaltaat.svg"
+   sodipodi:docname="grey-dot.svg"
    inkscape:version="0.92.3 (2405546, 2018-03-11)">
   <metadata
      id="metadata10">
@@ -21,6 +21,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -42,8 +43,8 @@
      inkscape:zoom="1.18"
      inkscape:cx="76.271186"
      inkscape:cy="100"
-     inkscape:window-x="155"
-     inkscape:window-y="290"
+     inkscape:window-x="133"
+     inkscape:window-y="207"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg4" />
   <circle
@@ -54,5 +55,5 @@
      stroke="#ff7f00"
      stroke-width="15px"
      id="circle2"
-     style="fill:#ff0000;fill-opacity:1;stroke:#090100;stroke-opacity:1" />
+     style="fill:#c8c8c8;fill-opacity:1;stroke:#646464;stroke-opacity:1" />
 </svg>

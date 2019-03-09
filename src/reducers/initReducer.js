@@ -2,6 +2,8 @@ import {getMapZoom} from '../components/MyMap';
 import L from 'leaflet';
 
 import {
+    GET_LEAFS_OK,
+    GET_LEAFS_FAIL,
     GET_POPUP_OK,
     GET_POPUP_FAIL,
     GET_LAYERS_OK,
@@ -25,17 +27,31 @@ import {
     SELECT_FEATURE,
     UNSELECT_FEATURE,
     SELECT_LAKE,
-    UNSELECT_LAKE
+    UNSELECT_LAKE,
+    SET_ZOOM
 } from '../actions/initAction';
+
+export const BACKGROUND = 0;
+export const CATCHMENT_ACTIONS = 1;
+export const LAKE_ACTIONS = 2;
+export const MONITORING = 3;
+export const LAKE = 4;
+export const CATCHMENT = 5;
+export const LAKE_BATHYMETRY = 6;
+export const ACTIONS = 7;
+export const RIGHTS = 8;
+export const FUNDERS = 9;
+export const FEEDBACK = 10;
 
 const initialState = {
     latlng: [61.05, 25.55],
     zoom: 11,
+    leafs: null,
     popup: [],
     layers: [],
     features: [],
     selected_feature: null,
-    lakes: null, // pointer to lake layer
+    lakes: null, // pointer to lakes layer
     backgrounds: [],
     flags: [],
     oikeudet: {},
@@ -62,6 +78,17 @@ function makeMarker(feature, latlng) {
 const initReducer = (state=initialState, action) => {
     console.log(action);
     switch (action.type) {
+    case GET_LEAFS_OK:
+        return {
+            ...state,
+            leafs: action.data,
+            error: ''
+        };
+    case GET_LEAFS_FAIL:
+        return {
+            ...state,
+            error: action.error
+        };
     case GET_POPUP_OK:
         return {
             ...state,
@@ -83,7 +110,18 @@ const initReducer = (state=initialState, action) => {
         for (let i = 0; i < state.features.length; i++) {
             features.push(state.features[i]);
         }
-        for (let i = 0; i < action.data.length; i++) {
+        let data = action.data;
+        data.sort(function(a, b) {
+            if (a.taso && b.taso) {
+                return a.taso - b.taso;
+            }
+            let n = a.name;
+            if (typeof n === 'undefined') {
+                n = '';
+            }
+            return n.localeCompare(b.name, 'fi');
+        });
+        for (let i = 0; i < data.length; i++) {
             let layer = action.data[i];
             if (!lakes && layer.name === 'Järvet') {
                 lakes = layer;
@@ -91,7 +129,7 @@ const initReducer = (state=initialState, action) => {
             layer.style = makeMarker;
             layers.push(layer);
             let fs = layer.features;
-            if (fs && fs.features && layer.leaf < 5) {
+            if (fs && fs.features && layer.geometry_type === 'Point') {
                 fs = fs.features;
                 for (let j = 0; j < fs.length; j++) {
                     let coords = fs[j].geometry.coordinates;
@@ -108,16 +146,6 @@ const initReducer = (state=initialState, action) => {
                 }
             }
         }
-        layers.sort(function(a, b) {
-            if (a.taso && b.taso) {
-                return a.taso - b.taso;
-            }
-            let n = a.name;
-            if (typeof n === 'undefined') {
-                n = '';
-            }
-            return n.localeCompare(b.name, 'fi');
-        });
         features.sort(function(a, b) {
             let n = a.properties.nimi;
             if (typeof n === 'undefined') {
@@ -128,8 +156,8 @@ const initReducer = (state=initialState, action) => {
         return {
             ...state,
             layers: layers,
-            features: features,
             lakes: lakes,
+            features: features,
             error: ''
         };
     case GET_LAYERS_FAIL:
@@ -290,12 +318,28 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SHOW_LEAF:
+        if (action.leaf === LAKE_BATHYMETRY) {
+            layers = [];
+            for (let i = 0; i < state.layers.length; i++) {
+                let layer = state.layers[i];
+                layers.push(layer);
+                if (layer.name === 'Järvet') {
+                    for (let j = 0; j < layer.features.features.length; j++) {
+                        let lake = layer.features.features[j];
+                        lake.show_bathymetry = true;
+                    }
+                }
+            }
+            return {
+                ...state,
+                layers: layers,
+                error: ''
+            };
+        }
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (action.leaf === 4 && layer.leaf >= 4) {
-                layer.visible = true;
-            } else if (layer.leaf === action.leaf) {
+            if (layer.leaf === action.leaf) {
                 layer.visible = true;
             }
             layers.push(layer);
@@ -306,12 +350,28 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case HIDE_LEAF:
+        if (action.leaf === LAKE_BATHYMETRY) {
+            layers = [];
+            for (let i = 0; i < state.layers.length; i++) {
+                let layer = state.layers[i];
+                layers.push(layer);
+                if (layer.name === 'Järvet') {
+                    for (let j = 0; j < layer.features.features.length; j++) {
+                        let lake = layer.features.features[j];
+                        lake.show_bathymetry = false;
+                    }
+                }
+            }
+            return {
+                ...state,
+                layers: layers,
+                error: ''
+            };
+        }
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (action.leaf === 4 && layer.leaf >= 4) {
-                layer.visible = false;
-            } else if (layer.leaf === action.leaf) {
+            if (layer.leaf === action.leaf) {
                 layer.visible = false;
             }
             layers.push(layer);
@@ -391,6 +451,12 @@ const initReducer = (state=initialState, action) => {
             ...state,
             layers: layers,
             lakes: lakes,
+            error: ''
+        };
+    case SET_ZOOM:
+        return {
+            ...state,
+            zoom: action.level,
             error: ''
         };
     default:
