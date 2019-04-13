@@ -30,8 +30,14 @@ export const SET_ZOOM = 'SET_ZOOM';
 
 export const getLeafs = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/leafs';
-        fetch(url)
+        fetch(url, obj)
             .then((response) => { // 200-499
                 if (response.ok) {
                     response.json()
@@ -54,8 +60,14 @@ export const getLeafs = () => {
 
 export const getPopup = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/popup';
-        fetch(url)
+        fetch(url, obj)
             .then((response) => { // 200-499
                 if (response.ok) {
                     response.json()
@@ -78,8 +90,14 @@ export const getPopup = () => {
 
 export const getLayers = (set) => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/kohteet/' + set;
-        fetch(url)
+        fetch(url, obj)
             .then((response) => { // 200-499
                 if (response.ok) {
                     response.json()
@@ -102,8 +120,14 @@ export const getLayers = (set) => {
 
 export const getOikeudet = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/oikeudet';
-        fetch(url).then((response) => { // 200-499
+        fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json()
                     .then(data => {
@@ -124,8 +148,14 @@ export const getOikeudet = () => {
 
 export const getBathymetry = (lake) => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/kohteet/6/syvyyskartta=' + lake.properties.syvyyskartta;
-        fetch(url).then((response) => { // 200-499
+        fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
                     dispatch(getBathymetryOk(lake, data));
@@ -143,8 +173,14 @@ export const getBathymetry = (lake) => {
 
 export const getLakeAreas = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/kohteet/4/21/jarvialueet';
-        fetch(url).then((response) => { // 200-499
+        fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
                     dispatch(getLakeAreasOk(data));
@@ -162,8 +198,14 @@ export const getLakeAreas = () => {
 
 export const getBackground = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/taustakartat';
-        fetch(url).then((response) => { // 200-499
+        fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
                     dispatch(getBackgroundOk(data));
@@ -181,8 +223,14 @@ export const getBackground = () => {
 
 export const getFlags = () => {
     return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
         let url = server + '/rahoittajat';
-        fetch(url).then((response) => { // 200-499
+        fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
                     dispatch(getFlagsOk(data));

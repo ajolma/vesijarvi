@@ -13,7 +13,7 @@
    viewBox="0 0 20 20"
    style="display: block;"
    version="1.1"
-   sodipodi:docname="virtavesikunnostukset.svg"
+   sodipodi:docname="grey-upright-triangle.svg"
    inkscape:version="0.92.3 (2405546, 2018-03-11)">
   <metadata
      id="metadata1544">
@@ -36,24 +36,25 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1217"
-     inkscape:window-height="796"
+     inkscape:window-width="1426"
+     inkscape:window-height="939"
      id="namedview1542"
      showgrid="false"
      inkscape:zoom="11.8"
-     inkscape:cx="7.8628435"
+     inkscape:cx="3.6149944"
      inkscape:cy="10"
-     inkscape:window-x="66"
-     inkscape:window-y="28"
+     inkscape:window-x="1"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
-     inkscape:current-layer="ext-comp-1068_svgRoot" />
+     inkscape:current-layer="ext-comp-1068_root" />
   <g
      id="ext-comp-1068_root"
-     transform="matrix(0.97016759,-0.95057433,0.92782232,0.94694661,-8.6404817,9.8614109)"
-     style="fill:#00bff9;fill-opacity:1">
+     transform="matrix(0.97016759,-0.95057433,0.92782232,0.94694661,-5.8438715,-0.47757211)"
+     style="fill:#c8c8c8;fill-opacity:1">
     <g
        id="ext-comp-1068_vroot"
-       style="fill:#00bff9;fill-opacity:1">
+       style="fill:#c8c8c8;fill-opacity:1;stroke:#646464;stroke-opacity:1"
+       transform="translate(-6.8862815,4.0950634)">
       <svg
          id="OpenLayers_Geometry_Point_1211"
          cx="10"
@@ -65,17 +66,17 @@
          x="-8"
          y="-8"
          version="1.1"
-         style="fill:#00bff9;fill-opacity:1;stroke:#000000;stroke-width:0.83333331;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1">
+         style="fill:#c8c8c8;fill-opacity:1;stroke:#646464;stroke-width:0.83333331;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1">
         <polygon
            points="10,10 5,0 0,10 "
            transform="rotate(45,5,5)"
            id="polygon1531"
-           style="fill:#00bff9;fill-opacity:1" />
+           style="fill:#c8c8c8;fill-opacity:1;stroke:#646464;stroke-opacity:1" />
       </svg>
     </g>
     <g
        id="ext-comp-1068_troot"
-       style="fill:#00bff9;fill-opacity:1" />
+       style="fill:#c8c8c8;fill-opacity:1" />
   </g>
   <defs
      id="ext-comp-1068_defs">

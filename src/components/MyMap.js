@@ -35,12 +35,19 @@ function kuvatHTML(kuvat) {
         name,
         poster,
         src,
+        scale,
         i;
     for (i = 0; i < filenames.length; i++) {
         name = filenames[i];
 
         if (name.substring(0,7) === "http://") {
             src = name;
+            let regex = /\(([\d%]+)\)$/;
+            let m = src.match(regex);
+            if (m) {
+                src = src.replace(m[0], '');
+                scale = m[1];
+            }
         } else {
             src = 'media/' + name;
         }
@@ -61,13 +68,17 @@ function kuvatHTML(kuvat) {
                 'Videon lataus voi kestää hetken.';
             //html += ' Se käynnistyy automaattisesti latauduttuaan.';
         } else {
-            html += "<img src=\"" + src + "\" /><br />";
+            if (scale) {
+                html += '<img src="' + src + '" width="' + scale + '" height="' + scale + '"/><br />';
+            } else {
+                html += '<img src="' + src + '"/><br />';
+            }
         }
     }
     return html;
 }
 
-export const popupHtml = (popup, feature, layer) => {
+export const popupHtml = (popup, feature) => {
     let html = '<h3>' + feature.properties.nimi + '</h3>';
     for (let i = 0; i < popup.length; i++) {
         if (popup[i].otsikko === 'kuvat') {
@@ -84,7 +95,7 @@ let my_map = null;
 
 function onEachFeature(feature, layer) {
     if (my_map) {
-        layer.bindPopup(popupHtml(my_map.props.popup, feature, layer));
+        layer.bindPopup(popupHtml(my_map.props.popup, feature));
     }
 }
 
@@ -110,7 +121,7 @@ class MyMap extends Component {
 
         if (this.props.layers.length === 0) {
             if (map !== null) {
-                let msg = '<img src="media/loading.gif" width="64" height="64"/>';
+                let msg = '<img src="media/loading.gif" alt="Sivua ladataan..." width="64" height="64"/>';
                 L.popup({closeButton: false})
                     .setLatLng(this.props.latlng)
                     .setContent(msg)

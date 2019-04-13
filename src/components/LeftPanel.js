@@ -12,6 +12,8 @@ import {mapsPlaceHolder} from '../index.js';
 import {popupHtml, closePopups} from './MyMap';
 import './LeftPanel.css';
 
+// ehkä https://icons8.com/license
+
 import {
     BACKGROUND,
     CATCHMENT_ACTIONS,
@@ -109,10 +111,13 @@ class LeftPanel extends Component {
     places = {}
 
     onChangeOfPlace = (e) => {
+        console.log(e);
         if (this.places.hasOwnProperty(e.target.value)) {
+            console.log(e.target.value);
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
             let latlng = feature.latlng;
+            console.log(index,feature,latlng);
             L.popup()
                 .setLatLng(latlng)
                 .setContent(popupHtml(this.props.popup, feature))
@@ -126,9 +131,7 @@ class LeftPanel extends Component {
     onClickOnLake = (e) => {
         let index = parseInt(e.target.id, 10);
         let lake = this.props.lakes.features.features[index];
-        if (!lake) {
-            console.log('click on lake', index, this.props.lakes.features.features);
-        } else {
+        if (lake) {
             if (lake.show_bathymetry) {
                 this.props.dispatch(unselectLake(index));
                 closePopups();
@@ -338,25 +341,32 @@ class LeftPanel extends Component {
         let kuvaukset = [];
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.leaf < 5 && layer.kuvaus) {
+            if ((layer.leaf === 1 || layer.leaf === 2) && layer.kuvaus) {
                 let parts = layer.kuvaus.split(";");
                 let content = [];
-                let j = 0;
-                while (j < parts.length) {
-                    if (j+1 < parts.length && parts[j+1].substr(0, 5) === 'http:') {
-                        content.push(<p key={key} className="left-para">{parts[j]}
-                                     <a target="info" href={parts[j+1]}>(Lähde)</a></p>);
-                        j += 2;
+                for (let j = 0; j < parts.length; j++) {
+                    //console.log(parts[j]);
+                    if (parts[j].substr(0, 4) === 'http') {
+                        content.push(
+                            <p key={key} className="left-para">
+                                <a target="info" href={parts[j]}>(Lähde)</a>
+                            </p>);
                     } else {
                         content.push(<p key={key} className="left-para">{parts[j]}</p>);
-                        j += 1;
                     }
                     key++;
                 }
+                let title;
+                if (layer.kuvausotsikko) {
+                    title = layer.kuvausotsikko;
+                } else {
+                    title = layer.name;
+                }
                 kuvaukset.push({
                     key: i,
+                    order: layer.kuvaustaso,
                     title: {
-                        content: <Label content={layer.name} />,
+                        content: <Label content={title} />,
                     },
                     content:{
                         content: content
@@ -364,6 +374,7 @@ class LeftPanel extends Component {
                 });
             };
         }
+        kuvaukset.sort(function(a, b) {return a.kuvaustaso - b.kuvaustaso;});
 
         let oikeudet = [];
         for (let aineisto in this.props.oikeudet) {

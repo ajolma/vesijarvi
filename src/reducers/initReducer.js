@@ -72,11 +72,14 @@ function makeMarker(feature, latlng) {
             iconSize: [props.graphic_width, props.graphic_height]
         });
     }
-    return L.marker(latlng, {icon: myIcon});
+    return L.marker(latlng, {
+        icon: myIcon,
+        autoPan: true
+    });
 }
 
 const initReducer = (state=initialState, action) => {
-    console.log(action);
+    //console.log(action);
     switch (action.type) {
     case GET_LEAFS_OK:
         return {
@@ -123,7 +126,7 @@ const initReducer = (state=initialState, action) => {
         });
         for (let i = 0; i < data.length; i++) {
             let layer = action.data[i];
-            if (!lakes && layer.name === 'Järvet') {
+            if (!lakes && layer.class === 'lakes') {
                 lakes = layer;
             }
             layer.style = makeMarker;
@@ -241,7 +244,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             layers.push(state.layers[i]);
-            if (state.layers[i].name === 'Järvet') {
+            if (state.layers[i].class === 'lakes') {
                 lakes = state.layers[i];
                 for (let i = 0; i < lakes.features.features.length; i++) {
                     let lake = lakes.features.features[i];
@@ -268,7 +271,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             layers.push(state.layers[i]);
-            if (state.layers[i].name === 'Järvet') {
+            if (state.layers[i].class === 'lakes') {
                 lakes = state.layers[i];
                 for (let i = 0; i < lakes.features.features.length; i++) {
                     let lake = lakes.features.features[i];
@@ -323,7 +326,7 @@ const initReducer = (state=initialState, action) => {
             for (let i = 0; i < state.layers.length; i++) {
                 let layer = state.layers[i];
                 layers.push(layer);
-                if (layer.name === 'Järvet') {
+                if (layer.class === 'lakes') {
                     for (let j = 0; j < layer.features.features.length; j++) {
                         let lake = layer.features.features[j];
                         lake.show_bathymetry = true;
@@ -355,7 +358,7 @@ const initReducer = (state=initialState, action) => {
             for (let i = 0; i < state.layers.length; i++) {
                 let layer = state.layers[i];
                 layers.push(layer);
-                if (layer.name === 'Järvet') {
+                if (layer.class === 'lakes') {
                     for (let j = 0; j < layer.features.features.length; j++) {
                         let lake = layer.features.features[j];
                         lake.show_bathymetry = false;
@@ -417,7 +420,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             layers.push(state.layers[i]);
-            if (state.layers[i].name === 'Järvet') {
+            if (state.layers[i].class === 'lakes') {
                 lakes = state.layers[i];
                 let lake = lakes.features.features[action.index];
                 lake.show_bathymetry = true;
@@ -441,7 +444,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             layers.push(state.layers[i]);
-            if (state.layers[i].name === 'Järvet') {
+            if (state.layers[i].class === 'lakes') {
                 lakes = state.layers[i];
                 let lake = lakes.features.features[action.index];
                 lake.show_bathymetry = false;
