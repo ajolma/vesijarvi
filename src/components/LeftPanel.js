@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
-import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button } from 'semantic-ui-react';
+import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divider } from 'semantic-ui-react';
 import {connect} from 'react-redux';
-import {hideLayer, showLayer, hideLeaf, showLeaf,
+import {hideLayer, hideLayers, showLayer, hideLeaf, showLeaf,
         selectFeature,
         selectLake, unselectLake,
         selectBackground,
@@ -10,67 +10,62 @@ from '../actions/initAction';
 import L from 'leaflet';
 import {mapsPlaceHolder} from '../index.js';
 import {popupHtml, closePopups} from './MyMap';
+import MyModal from './Video';
+
 import './LeftPanel.css';
 
 // ehkä https://icons8.com/license
-
-import {
-    BACKGROUND,
-    CATCHMENT_ACTIONS,
-    LAKE_ACTIONS,
-    MONITORING,
-    LAKE,
-    CATCHMENT,
-    LAKE_BATHYMETRY,
-    ACTIONS,
-    RIGHTS,
-    FUNDERS,
-    FEEDBACK
-} from '../reducers/initReducer';
 
 class LeftPanel extends Component {
 
     constructor(props) {
         super(props);
         this.state = {
-            active: [CATCHMENT_ACTIONS, LAKE_ACTIONS],
-            activeIndex: -1,
+            reset: true,
+            active: {},
             topic: '',
             name: '',
             email: '',
-            feedback: ''
+            feedback: '',
+            size: 'max',
         };
+    }
+
+    static getDerivedStateFromProps(props, state) {
+        if (!state.reset) {
+            return {};
+        }
+        //console.log('getDerivedStateFromProps', props);
+        let active = {};
+        if (props.leafs) {
+            for (let [key, leaf] of Object.entries(props.leafs)) {
+                active[key] = leaf.active > 0;
+            }
+        }
+        return {
+            active: active,
+        };
+    }
+
+    ToggleSize = (e) => {
+        this.setState({
+            size: this.state.size === 'min' ? 'max' : 'min'
+        });
     }
 
     handleClick = (e, titleProps) => {
         const {index} = titleProps;
-        const {active, activeIndex} = this.state;
-        let newIndex = activeIndex === index ? -1 : index;
-        let newActive = [];
-        if ([CATCHMENT_ACTIONS, LAKE_ACTIONS].indexOf(newIndex) !== -1) {
-            newIndex = activeIndex;
+        //console.log('click on leaf',index);
+        //console.log('state active is',this.state.active);
+        let active = {};
+        for (let leaf = 0; leaf < Object.keys(this.state.active).length; leaf++) {
+            active[leaf] = this.state.active[leaf];
         }
-        if ([CATCHMENT_ACTIONS, LAKE_ACTIONS].indexOf(index) !== -1) {
-            if (active.indexOf(index) !== -1) {
-                for (let i = 0; i < active.length; i++) {
-                    if (active[i] !== index) {
-                        newActive.push(active[i]);
-                    }
-                }
-            } else {
-                for (let i = 0; i < active.length; i++) {
-                    newActive.push(active[i]);
-                }
-                newActive.push(index);
-            }
-        } else {
-            for (let i = 0; i < active.length; i++) {
-                newActive.push(active[i]);
-            }
-        }
+        active[index] = !active[index];
+        //console.log('set state active',active);
         this.setState({
-            active: newActive,
-            activeIndex: newIndex
+            reset: false,
+            active: active,
         });
     }
 
@@ -85,22 +80,26 @@ class LeftPanel extends Component {
         if (e.target.id === '') {
             return;
         }
-        let index = parseInt(e.target.id, 10);
-        if (index < 0) {
-            if (index < -100) {
-                let leaf = -(100+index);
-                if (leaf === LAKE_BATHYMETRY && this.props.lakes) {
-                    for (let i = 0; i < this.props.lakes.features.features.length; i++) {
-                        let lake = this.props.lakes.features.features[i];
-                        if (lake && lake.properties.syvyyskartta && !lake.bathymetry) {
-                            this.props.dispatch(getBathymetry(lake));
-                        }
+        //let index = parseInt(e.target.id, 10);
+        let index = e.target.id;
+        //console.log('index',index);
+        if (index.includes('show')) {
+            let leaf = index.replace("show ", "");
+            let is_bathymetry = false;
+            if (leaf === this.props.klasses.bathymetry && this.props.lakes) {
+                for (let i = 0; i < this.props.lakes.features.features.length; i++) {
+                    let lake = this.props.lakes.features.features[i];
+                    if (lake && lake.properties.syvyyskartta && !lake.bathymetry) {
+                        this.props.dispatch(getBathymetry(lake));
                     }
                 }
-                this.props.dispatch(showLeaf(leaf));
-            } else {
-                this.props.dispatch(hideLeaf(-index));
+                is_bathymetry = true;
             }
+            this.props.dispatch(showLeaf(leaf, is_bathymetry));
+        } else if (index.includes('hide')) {
+            let leaf = index.replace("hide ", "");
+            let is_bathymetry = leaf === this.props.klasses.bathymetry;
+            this.props.dispatch(hideLeaf(leaf, is_bathymetry));
         } else if (this.props.layers[index].visible) {
             this.props.dispatch(hideLayer(index));
         } else {
@@ -111,13 +110,10 @@ class LeftPanel extends Component {
     places = {}
 
     onChangeOfPlace = (e) => {
-        console.log(e);
         if (this.places.hasOwnProperty(e.target.value)) {
-            console.log(e.target.value);
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
             let latlng = feature.latlng;
-            console.log(index,feature,latlng);
             L.popup()
                 .setLatLng(latlng)
                 .setContent(popupHtml(this.props.popup, feature))
@@ -181,7 +177,7 @@ class LeftPanel extends Component {
             h = 21;
             w = 21;
         }
-        let url = 'media/' + legend;
+        let url = process.env.PUBLIC_URL + '/media/' + legend;
         return <img id={id} alt="" src={url} height={h} width={w}/>;
     }
 
@@ -198,7 +194,7 @@ class LeftPanel extends Component {
         let img = '';
         if (visible) {
             if (image) {
-                let url = 'media/' + image;
+                let url = process.env.PUBLIC_URL + '/media/' + image;
                 if (h) {
                     img = <img alt="" src={url} height={h} width={w}/>;
                 } else {
@@ -211,16 +207,34 @@ class LeftPanel extends Component {
         return <div id={id} className={class_name}>{descr}{img}</div>;
     }
 
-    render() {
+    onHideAll = (b, e) => {
+        console.log(b, e);
+        this.setState({
+            reset: false,
+            active: {},
+        });
+        this.props.dispatch(hideLayers());
+    }
 
+    render() {
+        
         let leafs = this.props.leafs;
+        //console.log('props',this.props);
         if (!leafs || this.props.layers.length === 0) {
-            return <br/>;
+          return <br/>;
         }
-        for (let leaf in leafs) {
-            leafs[leaf].layers = [];
-            leafs[leaf].hidden = true;
+        let active = this.state.active;
+        //console.log('state',this.state);
+
+        let layers = {};
+        for (let [key, leaf] of Object.entries(leafs)) {
+            layers[key] = {
+                layers: [],
+                active: leaf.active > 0,
+                hidden: true,
+            };
         }
+        //console.log('layers',layers);
 
         let key = 0;
         for (let i = 0; i < this.props.backgrounds.length; i++) {
@@ -228,9 +242,10 @@ class LeftPanel extends Component {
             let legend = this.layer_legend(bg.visible, i);
             let name = this.layer_name(bg.visible, i, bg.otsikko);
             let descr = this.layer_descr(bg.visible, i, bg.kuvaus);
-            leafs[BACKGROUND].layers.push(
+            layers[this.props.klasses.bg].layers.push
+            (
                 <div key={key} onClick={this.selectBackground} id={i} style={{cursor: 'pointer'}}>
-                    {legend} {name} <br/> {descr}
+                  {legend} {name} <br/> {descr}
                 </div>
             );
             key++;
@@ -238,18 +253,18 @@ class LeftPanel extends Component {
 
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            let leaf = layer.leaf;
+            let leaf = String(layer.leaf);
             let legend = layer.legend;
             let h = layer.graphic_height;
             let w = layer.graphic_width;
             let descr = '';
             switch (leaf) {
-            case CATCHMENT_ACTIONS:
-            case LAKE_ACTIONS:
-            case MONITORING:
+            case this.props.klasses.monitoring:
+            case this.props.klasses.lake_actions:
+            case this.props.klasses.catchment_actions:
                 break;
-            case LAKE:
-            case CATCHMENT:
+            case this.props.klasses.lake:
+            case this.props.klasses.catchment:
                 if (!layer.legend_hidden) {
                     descr = this.layer_descr(layer.visible, i, layer.kuvaus, legend, h, w);
                     legend = null;
@@ -261,7 +276,7 @@ class LeftPanel extends Component {
                 continue;
             }
             if (layer.visible) {
-                leafs[leaf].hidden = false;
+                layers[leaf].hidden = false;
             } else if (legend) {
                 legend = layer.legend_hidden;
             }
@@ -269,9 +284,9 @@ class LeftPanel extends Component {
             let name = this.layer_name(layer.visible, i, layer.name);
             let div =
                 <div key={key} onClick={this.onLayerClick} id={i} style={{cursor: 'pointer'}}>
-                    {img} {name} <br/> {descr}
+                  {img} {name} <br/> {descr}
                 </div>;
-            leafs[leaf].layers.push(div);
+            layers[leaf].layers.push(div);
             key++;
         }
         if (this.props.lakes) {
@@ -282,12 +297,12 @@ class LeftPanel extends Component {
                 }
                 let visible = lake.show_bathymetry;
                 if (visible) {
-                    leafs[LAKE_BATHYMETRY].hidden = false;
+                    layers[this.props.klasses.bathymetry].hidden = false;
                 }
                 let img = this.layer_legend(visible, i);
                 let name = this.layer_name(visible, i, lake.properties.nimi);
                 let descr = this.layer_descr(visible, i, '', lake.properties.syvyyskartta + '.png');
-                leafs[LAKE_BATHYMETRY].layers.push(
+                layers[this.props.klasses.bathymetry].layers.push(
                     <div key={key} onClick={this.onClickOnLake} id={i} style={{cursor: 'pointer'}}>
                         {img} {name} <br/> {descr}
                     </div>
@@ -295,25 +310,25 @@ class LeftPanel extends Component {
                 key++;
             }
         }
-        for (let leaf in leafs) {
-            if (!leafs[leaf].layers || parseInt(leaf, 10) === BACKGROUND) {
+        for (let leaf in layers) {
+            if (!layers[leaf].layers || leaf === this.props.klasses.bg) {
                 continue;
             }
             let imgUrl, name, id;
-            if (leafs[leaf].hidden) {
-                id = -100-leaf;
-                imgUrl = 'media/yes.svg';
+            if (layers[leaf].hidden) {
+                id = 'show ' + leaf;
+                imgUrl = process.env.PUBLIC_URL + '/media/yes.svg';
                 name = <span id={id} className="">Näytä kaikki {leafs[leaf].title.toLowerCase()}</span>;
             } else {
-                imgUrl = 'media/no.svg';
-                id = -leaf;
+                imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
+                id = 'hide ' + leaf;
                 name = <span id={id} className="">Piilota kaikki {leafs[leaf].title.toLowerCase()}</span>;
             }
             let div =
                 <div key={key} onClick={this.onLayerClick} id={id} style={{cursor: 'pointer'}}>
                     <img alt="" src={imgUrl} height={21} width={21} id={id}/> {name}
                 </div>;
-            leafs[leaf].layers.unshift(div);
+            layers[leaf].layers.unshift(div);
             key++;
         }
 
@@ -401,8 +416,8 @@ class LeftPanel extends Component {
                     <List.Content>
                         <List.Header>{aineisto}</List.Header>
                         <List.Description>
-                            <a target="_blank" 
-                               rel="noopener noreferrer" 
+                            <a target="_blank"
+                               rel="noopener noreferrer"
                                href={o.omistaja_url}>&copy; {o.omistaja}</a>&nbsp;
                             {lisenssi} {metatieto} {latauspvm} {lisatieto}
                         </List.Description>
@@ -412,94 +427,103 @@ class LeftPanel extends Component {
         }
 
         let accs = [];
-        [
-            BACKGROUND,
-            CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING,
-            LAKE, CATCHMENT, LAKE_BATHYMETRY,
-            ACTIONS, RIGHTS, FUNDERS, FEEDBACK
-        ].forEach((i) => {
-             let isActive = this.state.activeIndex === i || this.state.active.indexOf(i) !== -1;
-             let color = isActive ? 'teal' : 'grey';
-             accs.push(
-                     <Accordion.Title active={isActive} index={i} onClick={this.handleClick} key={key}>
-                         <Icon name='dropdown' />
-                         <Label color={color}>{leafs[i].title}</Label>
-                     </Accordion.Title>
-             );
-             key++;
-             let content;
-             switch (i) {
-             case ACTIONS:
-                 content = <Accordion panels={kuvaukset} />;
-                 break;
-             case RIGHTS:
-                 content = <List>{oikeudet}</List>;
-                 break;
-             case FUNDERS:
-                 content = <div className="flags">{flags}</div>;
-                 break;
-             case FEEDBACK:
-                 content =
-                 <Form onSubmit={this.handleFeedback}>
-                     <Input
-                         placeholder='Aihe' name='topic'
-                         value={this.state.topic}
-                         onChange={this.feedbackChanged} />
-                     <Input
-                         placeholder='Nimi' name='name'
-                         value={this.state.name}
-                         onChange={this.feedbackChanged} />
-                     <Input
-                         placeholder='Sähköpostiosoite'
-                         name='email'
-                         value={this.state.email}
-                         onChange={this.feedbackChanged} />
-                     <TextArea
-                         placeholder='Palaute *'
-                         value={this.state.palaute}
-                         onChange={this.feedbackChanged}
-                         name='feedback' />
-                     * = Pakollinen tieto<br/>
-                     <Button>Lähetä</Button>
-                 </Form>;
-                 break;
-             default:
-                 content =
-                 <div className="left-para">
-                     {leafs[i].layers}
-                 </div>;
-             }
-             accs.push(
-                 <Accordion.Content active={isActive} key={key}>
-                    {content}
+        for (let i = 0; i < Object.keys(leafs).length; i++) {
+            //console.log('leaf i',i,leafs[i],active[i]);
+            let isActive = active[i];
+            let color = isActive ? 'teal' : 'grey';
+            accs.push(
+                <Accordion.Title active={isActive} index={i} onClick={this.handleClick} key={key}>
+                       <Icon name='dropdown' />
+                  <Label color={color}>{leafs[i].title}</Label>
+                </Accordion.Title>
+            );
+            key++;
+            let content;
+            switch (String(i)) {
+            case this.props.klasses.actions:
+                content = <Accordion panels={kuvaukset} />;
+                break;
+            case this.props.klasses.rights:
+                content = <List>{oikeudet}</List>;
+                break;
+            case this.props.klasses.funders:
+                content = <div className="flags">{flags}</div>;
+                break;
+            case this.props.klasses.feedback:
+                content =
+                    <Form onSubmit={this.handleFeedback}>
+                      <Input
+                        placeholder='Aihe' name='topic'
+                        value={this.state.topic}
+                        onChange={this.feedbackChanged} />
+                      <Input
+                        placeholder='Nimi' name='name'
+                        value={this.state.name}
+                        onChange={this.feedbackChanged} />
+                      <Input
+                        placeholder='Sähköpostiosoite'
+                        name='email'
+                        value={this.state.email}
+                        onChange={this.feedbackChanged} />
+                      <TextArea
+                        placeholder='Palaute *'
+                        value={this.state.palaute}
+                        onChange={this.feedbackChanged}
+                        name='feedback' />
+                      * = Pakollinen tieto<br/>
+                      <Button>Lähetä</Button>
+                    </Form>;
+                break;
+            default:
+                content =
+                    <div className="left-para">
+                      {layers[i].layers}
+                    </div>;
+            }
+            accs.push(
+                <Accordion.Content active={isActive} key={key}>
+                  {content}
                 </Accordion.Content>
-             );
-             key++;
-        });
+            );
+            key++;
+        };
 
-        return (
-            <div className="LeftPanel" align="left">
-                <Menu.Item>
+        if (this.state.size === 'min') {
+            return (
+                <div className="LeftPanelMinimized" align="left">
+                    <Icon name='angle double right' onClick={this.ToggleSize} />
+                </div>
+            );
+        } else {
+            return (
+                <div className="LeftPanel" align="left">
+                  <Menu.Item>
                     <Input list='places'
                            className='icon'
                            icon='search'
                            placeholder='Hae...'
                            onChange={this.onChangeOfPlace} />
-                    <datalist id='places'>
-                        {datalist}
-                    </datalist>
-                </Menu.Item>
-                <Accordion exclusive={false}>
-                    {accs}
-                </Accordion>
-            </div>
-        );
+                    &nbsp;&nbsp;<Icon name='angle double left' onClick={this.ToggleSize} />
+                    <datalist id='places'>{datalist}</datalist>
+                  </Menu.Item>
+                  <Divider />
+                  <MyModal id="RXLopKnRH58"/>
+                  <Divider />
+                  <Button onClick={this.onHideAll}>Piilota kaikki</Button>
+                  <Divider />
+                  <Accordion exclusive={false}>{accs}</Accordion>
+                </div>
+            );
+        }
     }
-
 }
 
+// <Button>Näytä esittelyvideo</Button>
+
 const mapStateToProps = (state) => {
+    //console.log('state',state);
     return {
+        klasses: state.init.klasses,
         leafs: state.init.leafs,
         popup: state.init.popup,
         layers: state.init.layers,

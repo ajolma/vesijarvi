@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
+import ReactDOMServer from "react-dom/server";
 import {connect} from 'react-redux';
 import {Map, TileLayer, GeoJSON,
         Polygon, Polyline, Tooltip, ScaleControl} from 'react-leaflet';
 import L from 'leaflet';
 import {mapsPlaceHolder} from '../index.js';
 import './MyMap.css';
+import { ControlledPopup } from './MyPopup';
 
 function element(tag, attrs, text) {
     var a = '';
@@ -40,7 +42,7 @@ function kuvatHTML(kuvat) {
     for (i = 0; i < filenames.length; i++) {
         name = filenames[i];
 
-        if (name.substring(0,7) === "http://") {
+        if (name.substring(0,7) === "http://" || name.substring(0,8) === "https://") {
             src = name;
             let regex = /\(([\d%]+)\)$/;
             let m = src.match(regex);
@@ -49,7 +51,7 @@ function kuvatHTML(kuvat) {
                 scale = m[1];
             }
         } else {
-            src = 'media/' + name;
+            src = process.env.PUBLIC_URL + '/media/' + name;
         }
 
         if (/mp4/.test(name)) {
@@ -59,7 +61,7 @@ function kuvatHTML(kuvat) {
                 height: 200,
                 controls: true,
                 preload: "none",
-                poster: 'media/' + poster[1] + '.jpeg'
+                poster: process.env.PUBLIC_URL + '/media/' + poster[1] + '.jpeg'
             };
             //attrs.autoplay = 'autoplay';
             html += element('video',
@@ -81,10 +83,18 @@ function kuvatHTML(kuvat) {
 export const popupHtml = (popup, feature) => {
     let html = '<h3>' + feature.properties.nimi + '</h3>';
     for (let i = 0; i < popup.length; i++) {
+        let t = feature.properties[popup[i].sarake];
+        if (!t) {
+            continue;
+        }
         if (popup[i].otsikko === 'kuvat') {
             html += kuvatHTML(feature.properties.kuvat);
+        } else if (popup[i].otsikko === 'Tyyppi') {
+            html += '<h4>'+t+'</h4>';
+        } else if (typeof t === 'string' && t.startsWith('http')) {
+            html += '<a href="' + t + '" target="_blank">' + popup[i].otsikko + '</a>';
         } else {
-            html += paragraph(popup[i].otsikko + ': ', feature.properties[popup[i].sarake]);
+            html += paragraph(popup[i].otsikko + ': ', t);
         }
     }
     return html;
@@ -97,6 +107,22 @@ function onEachFeature(feature, layer) {
     if (my_map) {
         layer.bindPopup(popupHtml(my_map.props.popup, feature));
     }
+}
+
+const CustomReactPopup = () => {
+  return (
+    <div style={{ fontSize: "24px", color: "black" }}>
+      <p>A pretty React Popup</p>
+    </div>
+  );
+};
+
+function clickOnPolygon(layer) {
+    return (p) => {
+        console.log('p',p);
+        console.log('layer',layer);
+        //ReactDOMServer.renderToString(<CustomReactPopup />);
+    };
 }
 
 export function getMapZoom() {
@@ -121,7 +147,9 @@ class MyMap extends Component {
 
         if (this.props.layers.length === 0) {
             if (map !== null) {
-                let msg = '<img src="media/loading.gif" alt="Sivua ladataan..." width="64" height="64"/>';
+                let loading = process.env.PUBLIC_URL + '/media/loading.gif';
+                let alt = 'Sivua ladataan ...';
+                let msg = '<img src="' + loading + '" alt="' + alt + '" width="64" height="64"/>';
                 L.popup({closeButton: false})
                     .setLatLng(this.props.latlng)
                     .setContent(msg)
@@ -134,10 +162,10 @@ class MyMap extends Component {
 
         if (map) {
             map.leafletElement.on('zoomstart', function() {
-                //console.log('zoom is ', getMapZoom());
+                console.log('zoom is ', getMapZoom());
             });
         }
-        
+
         let key = 1;
         let overlays = [];
         for (let i = 0; i < this.props.backgrounds.length; i++) {
@@ -145,7 +173,7 @@ class MyMap extends Component {
             if (bg.visible) {
                 overlays.push(
                     <TileLayer key={key}
-                               attribution={bg.attribution} 
+                               attribution={bg.attribution}
                                url={bg.url}/>);
                 break;
             }
@@ -234,17 +262,32 @@ class MyMap extends Component {
                             if (p[k].fill_color) {
                                 fill_color = p[k].fill_color;
                             }
-                            overlays.push(
-                                <Polygon key={key}
-                                         fillColor={fill_color}
-                                         fillOpacity={layer.fill_opacity}
-                                         stroke="true"
-                                         color={layer.stroke_color}
-                                         weight={layer.stroke_width}
-                                         opacity={layer.opacity}
-                                         positions={polygon}>
-                                    {tooltip}
-                                </Polygon>);
+                            let onClick = null;
+                            if (layer.popup) {
+                                //console.log(overlay);
+                                onClick = clickOnPolygon(p[k]);
+                                // onClick={onClick}
+                                /*
+                                overlay.bindPopup(
+                                    popupHtml(
+                                        my_map.props.popup,
+                                        {properties: p[i]}
+                                    )
+                                );
+                                */
+                            }
+                            let overlay = <Polygon key={key}
+                                                   fillColor={fill_color}
+                                                   fillOpacity={layer.fill_opacity}
+                                                   stroke="true"
+                                                   color={layer.stroke_color}
+                                                   weight={layer.stroke_width}
+                                                   opacity={layer.opacity}
+                                                   onClick={onClick}
+                                                   positions={polygon}>
+                                            {tooltip}
+                                          </Polygon>;
+                            overlays.push(overlay);
                             key++;
                         }
                     }
@@ -272,11 +315,11 @@ class MyMap extends Component {
         }
         return (
             <Map ref={(ref) => {map = ref;}}
-                 center={this.props.latlng} 
-                 zoom={this.props.zoom} 
+                 center={this.props.latlng}
+                 zoom={this.props.zoom}
                  minZoom="9"
                  maxZoom="18">
-                 {overlays}                                  
+                 {overlays}
                  <ScaleControl imperial="false"/>
             </Map>
         );

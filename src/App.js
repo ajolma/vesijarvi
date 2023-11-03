@@ -5,8 +5,9 @@ import {getLeafs, getPopup, getLayers, getOikeudet, getBackground, getFlags} fro
 import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
-export const server = 'https://biwatech.com/vj2';
-//export const server = 'http://192.168.11.23:5000/vj2';
+//export const server = 'https://biwatech.com/vj2';
+//export const server = 'http://localhost:5000/vj2';
+export const server = 'https://biwatech.com/vj2-test';
 
 class App extends Component {
 
@@ -22,12 +23,12 @@ class App extends Component {
         this.props.dispatch(getOikeudet());
         this.props.dispatch(getFlags());
     }
-    
+
     render() {
         return (
             <div className="App">
-                <LeftPanel/>
-                <MyMap/>
+              <LeftPanel/>
+              <MyMap/>
             </div>
         );
     }

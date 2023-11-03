@@ -21,6 +21,7 @@ import {
     GET_LAKE_AREAS_FAIL,
     SHOW_LAYER,
     HIDE_LAYER,
+    HIDE_LAYERS,
     SHOW_LEAF,
     HIDE_LEAF,
     SHOW_ALL_LAYERS,
@@ -31,22 +32,11 @@ import {
     SET_ZOOM
 } from '../actions/initAction';
 
-export const BACKGROUND = 0;
-export const CATCHMENT_ACTIONS = 1;
-export const LAKE_ACTIONS = 2;
-export const MONITORING = 3;
-export const LAKE = 4;
-export const CATCHMENT = 5;
-export const LAKE_BATHYMETRY = 6;
-export const ACTIONS = 7;
-export const RIGHTS = 8;
-export const FUNDERS = 9;
-export const FEEDBACK = 10;
-
 const initialState = {
     latlng: [61.05, 25.55],
     zoom: 11,
     leafs: null,
+    klasses: null,
     popup: [],
     layers: [],
     features: [],
@@ -68,7 +58,7 @@ function makeMarker(feature, latlng) {
         });
     } else {
         myIcon = L.icon({
-            iconUrl: 'media/' + props.legend,
+            iconUrl: process.env.PUBLIC_URL + '/media/' + props.legend,
             iconSize: [props.graphic_width, props.graphic_height]
         });
     }
@@ -82,9 +72,51 @@ const initReducer = (state=initialState, action) => {
     //console.log(action);
     switch (action.type) {
     case GET_LEAFS_OK:
+        //console.log('leafs received',action.data);
+        let klasses = {};
+        for (let [key, leaf] of Object.entries(action.data)) {
+            switch (leaf.klass) {
+            case 'bg':
+                klasses.bg = key;
+                break;
+            case 'bathymetry':
+                klasses.bathymetry = key;
+                break;
+            case 'lake':
+                klasses.lake = key;
+                break;
+            case 'catchment_actions':
+                klasses.catchment_actions = key;
+                break;
+            case 'catchment':
+                klasses.catchment = key;
+                break;
+            case 'lake_actions':
+                klasses.lake_actions = key;
+                break;
+            case 'monitoring':
+                klasses.monitoring = key;
+                break;
+            case 'feedback':
+                klasses.feedback = key;
+                break;
+            case 'rights':
+                klasses.rights = key;
+                break;
+            case 'funders':
+                klasses.funders = key;
+                break;
+            case 'actions':
+                klasses.actions = key;
+                break;
+            default:
+                continue;
+            }
+        }
         return {
             ...state,
             leafs: action.data,
+            klasses: klasses,
             error: ''
         };
     case GET_LEAFS_FAIL:
@@ -296,7 +328,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (i === action.index) {
+            if (String(i) === action.index) {
                 layer.visible = true;
             }
             layers.push(layer);
@@ -310,7 +342,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (i === action.index) {
+            if (String(i) === action.index) {
                 layer.visible = false;
             }
             layers.push(layer);
@@ -320,8 +352,26 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
+    case HIDE_LAYERS:
+        layers = [];
+        for (let i = 0; i < state.layers.length; i++) {
+            let layer = state.layers[i];
+            layers.push(layer);
+            if (layer.class === 'lakes') {
+                for (let j = 0; j < layer.features.features.length; j++) {
+                    let lake = layer.features.features[j];
+                    lake.show_bathymetry = false;
+                }
+            }
+            layer.visible = false;
+        }
+        return {
+            ...state,
+            layers: layers,
+            error: ''
+        };
     case SHOW_LEAF:
-        if (action.leaf === LAKE_BATHYMETRY) {
+        if (action.is_bathymetry) {
             layers = [];
             for (let i = 0; i < state.layers.length; i++) {
                 let layer = state.layers[i];
@@ -342,7 +392,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (layer.leaf === action.leaf) {
+            if (String(layer.leaf) === action.leaf) {
                 layer.visible = true;
             }
             layers.push(layer);
@@ -353,7 +403,7 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case HIDE_LEAF:
-        if (action.leaf === LAKE_BATHYMETRY) {
+        if (action.is_bathymetry) {
             layers = [];
             for (let i = 0; i < state.layers.length; i++) {
                 let layer = state.layers[i];
@@ -374,7 +424,7 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let i = 0; i < state.layers.length; i++) {
             let layer = state.layers[i];
-            if (layer.leaf === action.leaf) {
+            if (String(layer.leaf) === action.leaf) {
                 layer.visible = false;
             }
             layers.push(layer);

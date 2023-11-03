@@ -19,6 +19,7 @@ export const GET_LAKE_AREAS_OK = 'GET_LAKE_AREAS_OK';
 export const GET_LAKE_AREAS_FAIL = 'GET_LAKE_AREAS_FAIL';
 export const SHOW_LAYER = 'SHOW_LAYER';
 export const HIDE_LAYER = 'HIDE_LAYER';
+export const HIDE_LAYERS = 'HIDE_LAYERS';
 export const HIDE_LEAF = 'HIDE_LEAF';
 export const SHOW_LEAF = 'SHOW_LEAF';
 export const SHOW_ALL_LAYERS = 'SHOW_ALL_LAYERS';
@@ -423,17 +424,25 @@ export const hideLayer = (index) => {
     };
 }
 
-export const showLeaf = (leaf) => {
+export const hideLayers = () => {
     return {
-        type: SHOW_LEAF,
-        leaf: leaf
+        type: HIDE_LAYERS,
     };
 }
 
-export const hideLeaf = (leaf) => {
+export const showLeaf = (leaf, is_bathymetry) => {
+    return {
+        type: SHOW_LEAF,
+        leaf: leaf,
+        is_bathymetry: is_bathymetry,
+    };
+}
+
+export const hideLeaf = (leaf, is_bathymetry) => {
     return {
         type: HIDE_LEAF,
-        leaf: leaf
+        leaf: leaf,
+        is_bathymetry: is_bathymetry,
     };
 }
 
