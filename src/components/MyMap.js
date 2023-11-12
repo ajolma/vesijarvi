@@ -1,136 +1,149 @@
 import React, { Component } from 'react';
-import ReactDOMServer from "react-dom/server";
-import {connect} from 'react-redux';
-import {Map, TileLayer, GeoJSON,
-        Polygon, Polyline, Tooltip, ScaleControl} from 'react-leaflet';
-import L from 'leaflet';
-import {mapsPlaceHolder} from '../index.js';
+import { renderToString } from 'react-dom/server';
+import { connect } from 'react-redux';
+import { Header, Table } from 'semantic-ui-react';
+import { MapContainer, useMap, TileLayer, GeoJSON, Popup,
+         Polygon, Polyline, Tooltip, ScaleControl
+       } from 'react-leaflet';
 import './MyMap.css';
-import { ControlledPopup } from './MyPopup';
 
-function element(tag, attrs, text) {
-    var a = '';
-    for (var key in attrs) {
-        if (attrs.hasOwnProperty(key)) {
-            a += ' ' + key + '="' + attrs[key] + '"';
-        }
-    }
-    if (text)
-        return '<'+tag+a+'>'+text+'</'+tag+'>';
-    else
-        return '<'+tag+a+'/>';
-}
-
-function paragraph(h, t) {
-    if (!t) {
-        return '';
-    }
-    return '<p><b>' + h +'</b>' + t + '</p>';
-}
-
-function kuvatHTML(kuvat) {
-    if (!kuvat) {
-        return '';
-    }
-    var filenames = kuvat.split(/,/),
-        html = '',
-        name,
-        poster,
-        src,
-        scale,
-        i;
-    for (i = 0; i < filenames.length; i++) {
-        name = filenames[i];
-
-        if (name.substring(0,7) === "http://" || name.substring(0,8) === "https://") {
-            src = name;
-            let regex = /\(([\d%]+)\)$/;
-            let m = src.match(regex);
-            if (m) {
-                src = src.replace(m[0], '');
-                scale = m[1];
-            }
-        } else {
-            src = process.env.PUBLIC_URL + '/media/' + name;
-        }
-
-        if (/mp4/.test(name)) {
-            poster = name.match(/(\w+).mp4$/);
-            let attrs = {
-                width: 270,
-                height: 200,
-                controls: true,
-                preload: "none",
-                poster: process.env.PUBLIC_URL + '/media/' + poster[1] + '.jpeg'
-            };
-            //attrs.autoplay = 'autoplay';
-            html += element('video',
-                            attrs,
-                            element('source', {src:src, type:'video/mp4'})) +
-                'Videon lataus voi kestää hetken.';
-            //html += ' Se käynnistyy automaattisesti latauduttuaan.';
-        } else {
-            if (scale) {
-                html += '<img src="' + src + '" width="' + scale + '" height="' + scale + '"/><br />';
-            } else {
-                html += '<img src="' + src + '"/><br />';
-            }
-        }
-    }
-    return html;
-}
-
-export const popupHtml = (popup, feature) => {
-    let html = '<h3>' + feature.properties.nimi + '</h3>';
+export const make_popup_contents = (popup, feature) => {
+    let items = [];
+    //console.log('popup',popup);
+    //console.log('feature',feature);
+    let title = feature.properties.nimi;
+    let header = (
+        <Header as='h4'>
+          <Header.Content>
+            {title}
+            <Header.Subheader>Human Resources</Header.Subheader>
+          </Header.Content>
+        </Header>
+    );
+    let images = '';
     for (let i = 0; i < popup.length; i++) {
-        let t = feature.properties[popup[i].sarake];
-        if (!t) {
+        let otsikko = popup[i].otsikko;
+        let sarake = popup[i].sarake;
+        let value = feature.properties[sarake];
+        let typeOfValue = typeof value;
+        if (!value) {
+            continue;
+        } else {
+            value = String(value);
+        }
+        if (otsikko === 'kuvat') {
+            images = [];
+            let filenames = value.split(/,/);
+            //console.log(value,filenames.length);
+            for (let i = 0; i < filenames.length; i++) {
+                let name = filenames[i];
+                let src = name, scale = false;
+                if (name.substring(0,7) === "http://" || name.substring(0,8) === "https://") {
+                    let regex = /\(([\d%]+)\)$/;
+                    let m = src.match(regex);
+                    if (m) {
+                        src = src.replace(m[0], '');
+                        scale = m[1];
+                    }
+                } else {
+                    src = process.env.PUBLIC_URL + '/media/' + name;
+                }
+                if (/mp4/.test(name)) {
+                    let poster = name.match(/(\w+).mp4$/);
+                    poster = process.env.PUBLIC_URL + '/media/' + poster[1] + '.jpeg';
+                    images.push(
+                        <div key={2000+i}>
+                          <video width='270' height='200' controls={true} preload='none' poster={poster}>
+                            <source src={src} type='video/mp4'></source>
+                          </video>
+                          Videon lataus voi kestää hetken.
+                        </div>
+                    );
+                } else {
+                    if (scale) {
+                      images.push(
+                          <img src={src} alt={src} width={scale} height={scale} key={2000+i}></img>
+                      );
+                    } else {
+                        images.push(
+                            <img src={src} alt={src} key={2000+i}></img>
+                        );
+                    }
+                }
+            }
+            continue;
+        } else if (otsikko === 'Tyyppi') {
+            header = (
+                <Header as='h4'>
+                  <Header.Content>
+                    {title}
+                    <Header.Subheader>{value}</Header.Subheader>
+                  </Header.Content>
+                </Header>
+            );
             continue;
         }
-        if (popup[i].otsikko === 'kuvat') {
-            html += kuvatHTML(feature.properties.kuvat);
-        } else if (popup[i].otsikko === 'Tyyppi') {
-            html += '<h4>'+t+'</h4>';
-        } else if (typeof t === 'string' && t.startsWith('http')) {
-            html += '<a href="' + t + '" target="_blank">' + popup[i].otsikko + '</a>';
-        } else {
-            html += paragraph(popup[i].otsikko + ': ', t);
+        if (sarake === 'pinta_ala' && typeOfValue === 'number') {
+            value = value.replace('.', ',') + ' km';
+            value = <div>{value}<sup>2</sup></div>;
+        } else if (value.startsWith('http')) {
+            value = <a href={value} target='_blank' rel='noreferrer'>{otsikko}</a>;
+        } else if (value.includes('href')) {
+            let m = /<a (.*)?<\/a>/.exec(value);
+            let href = /href="(.*)?" /.exec(m[1]);
+            let t = />(.*)?</.exec(m[0]);
+            let x = value.replace(m[0], '|').split('|');
+            value = <div>{x[0]}<a href={href[1]} target='_blank' rel='noreferrer'>{t[1]}</a>{x[1]}</div>;
         }
+        items.push(
+            <Table.Row key={1000+i}>
+              <Table.Cell>{otsikko}</Table.Cell>
+              <Table.Cell>{value}</Table.Cell>
+            </Table.Row>
+        );
     }
-    return html;
+    return (
+        <div>
+          {header}
+          <Table>
+            <Table.Body>
+              {items}
+            </Table.Body>
+          </Table>
+          {images}
+        </div>
+    );
 };
 
 let map = null;
-let my_map = null;
 
-function onEachFeature(feature, layer) {
-    if (my_map) {
-        layer.bindPopup(popupHtml(my_map.props.popup, feature));
-    }
-}
-
-const CustomReactPopup = () => {
-  return (
-    <div style={{ fontSize: "24px", color: "black" }}>
-      <p>A pretty React Popup</p>
-    </div>
-  );
-};
-
-function clickOnPolygon(layer) {
-    return (p) => {
-        console.log('p',p);
-        console.log('layer',layer);
-        //ReactDOMServer.renderToString(<CustomReactPopup />);
-    };
+export function flyTo(latlng) {
+    //console.log('flyTo', latlng);
+    map.flyTo(latlng);
 }
 
 export function getMapZoom() {
-    return map && map.leafletElement.getZoom();
+    //console.log('map at', map._zoom, map._lastCenter);
+    //console.log('map at', map);
 }
 
-export function closePopups() {
-    return map && map.leafletElement.closePopup();
+export function setZoom(zoom) {
+    //console.log('setZoom', zoom);
+    map.setZoom(zoom);
+}
+
+export function setView(latlng, zoom) {
+    //console.log('set view', latlng, zoom);
+    map.setView(latlng, zoom);
+}
+
+export function fitBounds(bounds) {
+    //console.log('fitBounds', bounds);
+    map.fitBounds(bounds);
+}
+
+export function UseMap() {
+    map = useMap();
 }
 
 class MyMap extends Component {
@@ -138,190 +151,211 @@ class MyMap extends Component {
     constructor(props) {
         super(props);
         this.state = {};
-        my_map = this;
     }
 
-    initialized = false;
+    make_popup = (feature) => {
+        let contents = make_popup_contents(this.props.popup, feature);
+        return <Popup isDraggable={true}>{contents}</Popup>;
+    }
 
-    render() {
+    key = 1;
 
-        if (this.props.layers.length === 0) {
-            if (map !== null) {
-                let loading = process.env.PUBLIC_URL + '/media/loading.gif';
-                let alt = 'Sivua ladataan ...';
-                let msg = '<img src="' + loading + '" alt="' + alt + '" width="64" height="64"/>';
-                L.popup({closeButton: false})
-                    .setLatLng(this.props.latlng)
-                    .setContent(msg)
-                    .openOn(mapsPlaceHolder[0]);
-            }
-        } else if (!this.initialized) {
-            closePopups();
-            this.initialized = true;
-        }
-
-        if (map) {
-            map.leafletElement.on('zoomstart', function() {
-                console.log('zoom is ', getMapZoom());
-            });
-        }
-
-        let key = 1;
-        let overlays = [];
+    set_bg = (layers) => {
         for (let i = 0; i < this.props.backgrounds.length; i++) {
             let bg = this.props.backgrounds[i];
             if (bg.visible) {
-                overlays.push(
-                    <TileLayer key={key}
+                layers.push(
+                    <TileLayer key={this.key}
                                attribution={bg.attribution}
                                url={bg.url}/>);
+                this.key++;
                 break;
             }
         }
-        key++;
+    }
+
+    add_overlays = (layers) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.visible && layer.table.substr(0, 4) === 'http') {
-                overlays.push(
+            if (layer.visible && layer.table.startsWith('https')) {
+                //console.log('overlay',layer);
+                layers.push(
                     <TileLayer
-                        key={key}
+                        key={this.key}
                         attribution=''
                         tms='true'
                         opacity={layer.opacity}
                         url={layer.table}
                     />);
             }
-            key++;
+            this.key++;
         }
-        if (this.props.lakes) {
-            for (let i = 0; i < this.props.lakes.features.features.length; i++) {
-                let lake = this.props.lakes.features.features[i];
-                if (lake.bathymetry && lake.show_bathymetry) {
-                    let fill_opacity = lake.properties.fill_opacity;
-                    let stroke = false;
-                    for (let k = 0; k < lake.bathymetry.length; k++) {
-                        let ps = lake.bathymetry[k];
-                        let polygon = [];
-                        for (let j = 0; j < ps.length; j++) {
-                            polygon.push(ps[j]);
-                        }
-                        overlays.push(<Polygon key={key}
-                                               fillColor="blue"
-                                               fillOpacity={fill_opacity}
-                                               stroke={stroke}
-                                               opacity={fill_opacity}
-                                               positions={polygon} />);
-                        key++;
+    }
+
+    add_bathymetry = (layers) => {
+        let lakes = this.props.lakes;
+        if (!lakes) {
+            this.key += 20*40;
+            return;
+        }
+        for (let i = 0; i < lakes.features.features.length; i++) {
+            let lake = lakes.features.features[i];
+            //console.log('lake',lake);
+            if (lake.bathymetry && lake.show_bathymetry) {
+                //console.log('add lake bathymetry',lake);
+                let fill_opacity = lake.properties.fill_opacity;
+                let stroke = false;
+                for (let k = 0; k < lake.bathymetry.length; k++) {
+                    let ps = lake.bathymetry[k];
+                    let polygon = [];
+                    for (let j = 0; j < ps.length; j++) {
+                        polygon.push(ps[j]);
                     }
+                    layers.push(
+                        <Polygon key={this.key}
+                                 fillColor="blue"
+                                 fillOpacity={fill_opacity}
+                                 stroke={stroke}
+                                 opacity={fill_opacity}
+                                 positions={polygon}>
+                        </Polygon>
+                    );
+                    this.key++;
                 }
             }
-        } else {
-            key += 20*40;
         }
+    }
+
+    add_river = (layers, layer) => {
+        let c = layer.features.coordinates;
+        let p = layer.features.properties;
+        for (let k = 0; k < c.length; k++) {
+            let ps = c[k];
+            let polyline = [];
+            for (let j = 0; j < ps.length; j++) {
+                polyline.push(ps[j]);
+            }
+            layers.push(
+                <Polyline key={this.key}
+                          stroke="true"
+                          color={layer.stroke_color}
+                          weight={layer.stroke_width}
+                          opacity={layer.opacity}
+                          positions={polyline}>
+                  <Tooltip>{p[k].nimi}</Tooltip>
+                </Polyline>
+            );
+            this.key++;
+        }
+    }
+
+    add_lake = (layers, layer) => {
+        let c = layer.features.coordinates;
+        let p = layer.features.properties;
+        for (let k = 0; k < c.length; k++) {
+            let ps = c[k];
+            let polygon = [];
+            for (let j = 0; j < ps.length; j++) {
+                polygon.push(ps[j]);
+            }
+            let tooltip = '';
+            if (p[k].nimi) {
+                tooltip = <Tooltip>{p[k].nimi}</Tooltip>;
+            }
+            let fill_color = layer.fill_color;
+            if (p[k].fill_color) {
+                fill_color = p[k].fill_color;
+            }
+            let popup = null;
+            let onClick = null;
+            let feature = {
+                properties: p[k],
+            };
+            if (layer.popup) {
+                popup = this.make_popup(feature);
+            }
+            let overlay = <Polygon key={this.key}
+                                   fillColor={fill_color}
+                                   fillOpacity={layer.fill_opacity}
+                                   stroke="true"
+                                   color={layer.stroke_color}
+                                   weight={layer.stroke_width}
+                                   opacity={layer.opacity}
+                                   onClick={onClick}
+                                   positions={polygon}>
+                            {tooltip}
+                            {popup}
+                          </Polygon>;
+            layers.push(overlay);
+            this.key++;
+        }
+    }
+
+    add_rivers_and_lakes = (layers) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.visible && layer.table.substr(0, 4) !== 'http') {
+            //console.log(layer);
+            let from_net = layer.table.substr(0, 4) === 'http';
+            let features = layer.features;
+            if (layer.visible && !from_net && features && features.coordinates) {
                 if (layer.geometry_type === 'Polyline') {
-                    let c = layer.features.coordinates;
-                    let p = layer.features.properties;
-                    if (c) {
-                        for (let k = 0; k < c.length; k++) {
-                            let ps = c[k];
-                            let polyline = [];
-                            for (let j = 0; j < ps.length; j++) {
-                                polyline.push(ps[j]);
-                            }
-                            overlays.push(
-                                <Polyline key={key}
-                                          stroke="true"
-                                          color={layer.stroke_color}
-                                          weight={layer.stroke_width}
-                                          opacity={layer.opacity}
-                                          positions={polyline}>
-                                    <Tooltip>{p[k].nimi}</Tooltip>
-                                </Polyline>
-                            );
-                            key++;
-                        }
-                    }
+                    this.add_river(layers, layer);
                 } else if (layer.geometry_type === 'Polygon') {
-                    let c = layer.features.coordinates;
-                    let p = layer.features.properties;
-                    if (c) {
-                        for (let k = 0; k < c.length; k++) {
-                            let ps = c[k];
-                            let polygon = [];
-                            for (let j = 0; j < ps.length; j++) {
-                                polygon.push(ps[j]);
-                            }
-                            let tooltip = '';
-                            if (p[k].nimi) {
-                                tooltip = <Tooltip>{p[k].nimi}</Tooltip>;
-                            }
-                            let fill_color = layer.fill_color;
-                            if (p[k].fill_color) {
-                                fill_color = p[k].fill_color;
-                            }
-                            let onClick = null;
-                            if (layer.popup) {
-                                //console.log(overlay);
-                                onClick = clickOnPolygon(p[k]);
-                                // onClick={onClick}
-                                /*
-                                overlay.bindPopup(
-                                    popupHtml(
-                                        my_map.props.popup,
-                                        {properties: p[i]}
-                                    )
-                                );
-                                */
-                            }
-                            let overlay = <Polygon key={key}
-                                                   fillColor={fill_color}
-                                                   fillOpacity={layer.fill_opacity}
-                                                   stroke="true"
-                                                   color={layer.stroke_color}
-                                                   weight={layer.stroke_width}
-                                                   opacity={layer.opacity}
-                                                   onClick={onClick}
-                                                   positions={polygon}>
-                                            {tooltip}
-                                          </Polygon>;
-                            overlays.push(overlay);
-                            key++;
-                        }
-                    }
+                    this.add_lake(layers, layer);
                 }
             } else {
-                key += 200;
+                this.key += 200;
             }
         }
+    }
+
+    onEachFeature = (feature, layer) => {
+        //console.log('on each f',map);
+        let popup = make_popup_contents(this.props.popup, feature);
+        layer.bindPopup(renderToString(popup));
+    }
+
+    add_actions = (layers) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            let features = layer.features;
-            if (layer.geometry_type === 'Point'
-                && features.totalFeatures > 0
-                && layer.visible
-                && features.features) {
-                overlays.push(
-                    <GeoJSON key={key}
+            let features = layer.features || [];
+            let is_point = layer.geometry_type === 'Point';
+            if (is_point && layer.visible && features) {
+                //console.log(features);
+                layers.push(
+                    <GeoJSON key={this.key}
                              data={features}
                              pointToLayer={layer.style}
-                             onEachFeature={onEachFeature}>
+                             onEachFeature={this.onEachFeature}>
                     </GeoJSON>
                 );
             }
-            key++;
+            this.key++;
         }
+    }
+
+    render() {
+        //console.log('props',this.props);
+        this.key = 1;
+        let layers = [];
+
+        this.set_bg(layers);
+        this.add_overlays(layers);
+        this.add_bathymetry(layers);
+        this.add_rivers_and_lakes(layers);
+        this.add_actions(layers);
+
         return (
-            <Map ref={(ref) => {map = ref;}}
-                 center={this.props.latlng}
-                 zoom={this.props.zoom}
-                 minZoom="9"
-                 maxZoom="18">
-                 {overlays}
-                 <ScaleControl imperial="false"/>
-            </Map>
+            <MapContainer
+              ref={a => map = a}
+              center={this.props.latlng}
+              zoom={this.props.zoom}
+              eventHandlers={this.on_ref}
+              minZoom="9"
+              maxZoom="18">
+              {layers}
+              <ScaleControl imperial="false"/>
+            </MapContainer>
         );
     }
 }
@@ -336,6 +370,7 @@ const mapStateToProps = (state) => {
         features: state.init.features,
         selected_feature: state.init.selected_feature,
         backgrounds: state.init.backgrounds,
+        focused: state.init.focused,
         error: state.init.error
     };
 }

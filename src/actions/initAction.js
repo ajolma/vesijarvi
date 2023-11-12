@@ -1,5 +1,18 @@
 import {server} from '../App';
 
+export const BUTTONS = 'buttons';
+export const BG = 'bg';
+export const CATCHMENT_ACTIONS = 'catchment_actions';
+export const LAKE_ACTIONS = 'lake_actions';
+export const MONITORING = 'monitoring';
+export const LAKE = 'lake';
+export const CATCHMENT = 'catchment';
+export const BATHYMETRY = 'bathymetry';
+export const ACTIONS = 'actions';
+export const RIGHTS = 'rights';
+export const FUNDERS = 'funders';
+export const FEEDBACK = 'feedback';
+
 export const GET_LEAFS_OK = 'GET_LEAFS_OK';
 export const GET_LEAFS_FAIL = 'GET_LEAFS_FAIL';
 export const GET_POPUP_OK = 'GET_POPUP_OK';
@@ -18,18 +31,21 @@ export const GET_BATHYMETRY_FAIL = 'GET_BATHYMETRY_FAIL';
 export const GET_LAKE_AREAS_OK = 'GET_LAKE_AREAS_OK';
 export const GET_LAKE_AREAS_FAIL = 'GET_LAKE_AREAS_FAIL';
 export const SHOW_LAYER = 'SHOW_LAYER';
+export const SHOW_LAYERS = 'SHOW_LAYERS';
 export const HIDE_LAYER = 'HIDE_LAYER';
 export const HIDE_LAYERS = 'HIDE_LAYERS';
 export const HIDE_LEAF = 'HIDE_LEAF';
 export const SHOW_LEAF = 'SHOW_LEAF';
-export const SHOW_ALL_LAYERS = 'SHOW_ALL_LAYERS';
 export const SELECT_FEATURE = 'SELECT_FEATURE';
 export const UNSELECT_FEATURE = 'UNSELECT_FEATURE';
 export const SELECT_LAKE = 'SELECT_LAKE';
 export const UNSELECT_LAKE = 'UNSELECT_LAKE';
 export const SET_ZOOM = 'SET_ZOOM';
+export const SET_ACTIVE = 'SET_ACTIVE';
+export const SET_UNACTIVE = 'SET_UNACTIVE';
+export const SET_FOCUSED = 'SET_FOCUSED';
 
-export const getLeafs = () => {
+export const getLeafs = (props) => {
     return dispatch => {
         let obj = {
             method:"GET",
@@ -43,7 +59,7 @@ export const getLeafs = () => {
                 if (response.ok) {
                     response.json()
                         .then(data => {
-                            dispatch(getLeafsOk(data));
+                            dispatch(getLeafsOk(props, data));
                             return data.length;
                         })
                         .catch(error => {
@@ -155,7 +171,7 @@ export const getBathymetry = (lake) => {
                 "Accept-Encoding": "gzip"
             }
         };
-        let url = server + '/kohteet/6/syvyyskartta=' + lake.properties.syvyyskartta;
+        let url = server + '/kohteet/' + BATHYMETRY + '/syvyyskartta=' + lake.properties.syvyyskartta;
         fetch(url, obj).then((response) => { // 200-499
             if (response.ok) {
                 response.json().then(data => {
@@ -272,7 +288,7 @@ export const sendFeedback = (data) => {
             dispatch(sendFeedbackFail(error));
         });
     };
-};  
+};
 
 const sendFeedbackOk = (data) => {
     alert("Kiitos palautteestasi!");
@@ -291,7 +307,37 @@ const sendFeedbackFail = (error) => {
 
 // Action creators
 
-export const getLeafsOk = (data) => {
+export const getLeafsOk = (props, data) => {
+    for (let leaf of Object.values(data)) {
+        switch (leaf.klass) {
+        case BG:
+            props.dispatch(getBackground());
+            break;
+        case BUTTONS:
+        case CATCHMENT_ACTIONS:
+        case LAKE_ACTIONS:
+        case MONITORING:
+        case LAKE:
+        case CATCHMENT:
+        case ACTIONS:
+            //console.log(key, data[key]);
+            props.dispatch(getLayers(leaf.klass));
+            break;
+        case BATHYMETRY:
+            props.dispatch(getLakeAreas());
+            break;
+        case RIGHTS:
+            props.dispatch(getOikeudet());
+            break;
+        case FUNDERS:
+            props.dispatch(getFlags());
+            break;
+        case FEEDBACK:
+        default:
+            break;
+        }
+    }
+    props.dispatch(getBackground());
     return {
         type: GET_LEAFS_OK,
         data: data
@@ -320,6 +366,7 @@ export const getPopupFail = (error) => {
 }
 
 export const getLayersOk = (data) => {
+    //console.log(data);
     return {
         type: GET_LAYERS_OK,
         data: data
@@ -417,6 +464,12 @@ export const showLayer = (index) => {
     };
 }
 
+export const showLayers = () => {
+    return {
+        type: SHOW_LAYERS,
+    };
+}
+
 export const hideLayer = (index) => {
     return {
         type: HIDE_LAYER,
@@ -430,25 +483,17 @@ export const hideLayers = () => {
     };
 }
 
-export const showLeaf = (leaf, is_bathymetry) => {
+export const showLeaf = (klass) => {
     return {
         type: SHOW_LEAF,
-        leaf: leaf,
-        is_bathymetry: is_bathymetry,
+        klass: klass,
     };
 }
 
-export const hideLeaf = (leaf, is_bathymetry) => {
+export const hideLeaf = (klass) => {
     return {
         type: HIDE_LEAF,
-        leaf: leaf,
-        is_bathymetry: is_bathymetry,
-    };
-}
-
-export const showAllLayers = () => {
-    return {
-        type: SHOW_ALL_LAYERS
+        klass: klass,
     };
 }
 
@@ -483,5 +528,26 @@ export const setZoom = (level) => {
     return {
         type: SET_ZOOM,
         level: level
+    };
+}
+
+export const setActive = (klass) => {
+    return {
+        type: SET_ACTIVE,
+        klass: klass,
+    };
+}
+
+export const setUnActive = (klass) => {
+    return {
+        type: SET_UNACTIVE,
+        klass: klass,
+    };
+}
+
+export const setFocused = (focused) => {
+    return {
+        type: SET_FOCUSED,
+        focused: focused,
     };
 }

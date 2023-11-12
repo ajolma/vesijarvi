@@ -1,31 +1,37 @@
 import React from 'react';
-import { Button, Modal, Header } from 'semantic-ui-react';
-import { Embed } from 'semantic-ui-react';
+import { Embed, Button, Modal, Container, Header } from 'semantic-ui-react';
 
 const MyModal = (props) => {
     //console.log('video props', props);
     const [open, setOpen] = React.useState(false);
 
+    let embed = '';
+    //console.log(props);
+    if (props.video !== '') {
+        embed = <Embed
+                  id={props.video}
+                  source='youtube'
+                />;
+    }
+
     return (<Modal
               onClose={() => setOpen(false)}
               onOpen={() => setOpen(true)}
               open={open}
-              trigger={<Button>Näytä esittelyvideo</Button>}
+              trigger={<Button>{props.label}</Button>}
            >
-             <Modal.Header>Vesijärven karttapalvelu</Modal.Header>
+             <Modal.Header>{props.header}</Modal.Header>
              <Modal.Content image>
                <Modal.Description>
-                 <Header>Otsikko</Header>
-                 <p>
-                   Meillä on oma kanava ja nuo videot olisi hyvä varmaan ladata sieltä, etenkin jos se sujuvoittaa käyttöä.
+                 <Container text>
+                   <Header>{props.otsikko}</Header>
+                   <p>
+                     {props.kuvaus}
                  </p>
-                 <p>Onkos tämä hyvä?</p>
+                 </Container>
                </Modal.Description>
              </Modal.Content>
-             <Embed
-               id={props.id}
-               source='youtube'
-             />
+              {embed}
              <Modal.Actions>
                <Button
                  content="Sulje video"
