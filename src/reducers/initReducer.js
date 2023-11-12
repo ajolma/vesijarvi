@@ -24,6 +24,7 @@ import {
     SET_UNACTIVE,
     SET_FOCUSED
 } from '../actions/initAction';
+import { fitBounds } from '../components/MyMap';
 
 export const LAKES = 'lakes';
 
@@ -300,6 +301,9 @@ const initReducer = (state=initialState, action) => {
                         lake.bathymetry = action.data;
                         let bounds = getBounds(lake.bathymetry);
                         lake.bathymetry_bounds = bounds;
+                        if (state.focused) {
+                            fitBounds(bounds);
+                        }
                         //console.log('lake w bat',lake);
                         break;
                     }

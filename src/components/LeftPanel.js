@@ -75,7 +75,6 @@ class LeftPanel extends Component {
                 //console.log(layer);
                 for (let i = 0; i < layer.features.features.length; i++) {
                     let feature = layer.features.features[i];
-                    let point = feature.geometry.coordinates;
                     bounds = getBounds(feature.geometry.coordinates, bounds);
                 }
             } else if (is_poly && layer.visible && layer.features) {
