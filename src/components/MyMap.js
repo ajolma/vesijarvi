@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useRef, useMemo } from 'react';
 import { renderToString } from 'react-dom/server';
 import { connect } from 'react-redux';
 import { Header, Table } from 'semantic-ui-react';
@@ -6,11 +6,22 @@ import { MapContainer, useMap, TileLayer, GeoJSON, Popup,
          Polygon, Polyline, Tooltip, ScaleControl
        } from 'react-leaflet';
 import './MyMap.css';
+import { ESTATES } from '../actions/initAction';
 
 export const make_popup_contents = (popup, feature) => {
     let items = [];
-    //console.log('popup',popup);
-    //console.log('feature',feature);
+    let show = false;
+    if (feature.properties.kohdetyyppi === 'Vesijärveen laskevien jokien valuma-alueita'
+        && feature.properties.nimi === 'Hammonjoen va') {
+        //console.log('popup',popup);
+        /*
+        for (let p of Object.values(popup)) {
+            console.log('popup', p.sarake, p);
+        }
+        */
+        console.log('feature',feature);
+        show = true;
+    }
     let title = feature.properties.nimi;
     let header = (
         <Header as='h4'>
@@ -31,6 +42,7 @@ export const make_popup_contents = (popup, feature) => {
         } else {
             value = String(value);
         }
+        if (show) console.log(sarake,otsikko,value,typeOfValue);
         if (otsikko === 'kuvat') {
             images = [];
             let filenames = value.split(/,/);
@@ -83,7 +95,7 @@ export const make_popup_contents = (popup, feature) => {
             );
             continue;
         }
-        if (sarake === 'pinta_ala' && typeOfValue === 'number') {
+        if (sarake === 'pinta_ala' && !(value.includes('km') || value.includes('ha'))) {
             value = value.replace('.', ',') + ' km';
             value = <div>{value}<sup>2</sup></div>;
         } else if (value.startsWith('http')) {
@@ -146,6 +158,34 @@ export function UseMap() {
     map = useMap();
 }
 
+const HilitePolygon = (props) => {
+    const polygonRef = useRef();
+    const eventHandlers = useMemo(
+        () => ({
+            mouseover() {
+                polygonRef.current.setStyle({fillColor: "yellow"});
+            },
+            mouseout() {
+                polygonRef.current.setStyle({fillColor: props.fill_color});
+            }
+        }),
+        [props.fill_color]
+    );
+    console.log(props);
+    return (
+        <Polygon ref={polygonRef}
+                 eventHandlers={eventHandlers}
+                 fillColor={props.fillColor}
+                 fillOpacity={props.fillOpacity}
+                 stroke={props.stroke}
+                 opacity={props.opacity}
+                 color={props.color}
+                 positions={props.polygon}>
+          <Tooltip><div style={{ backgroundColor: 'yellow', fontWeight: 'bolder'}}>{props.tooltip}</div></Tooltip>
+        </Polygon>
+    );
+}
+
 class MyMap extends Component {
 
     constructor(props) {
@@ -189,6 +229,50 @@ class MyMap extends Component {
                     />);
             }
             this.key++;
+        }
+    }
+
+    add_estates = (layers) => {
+        let layer = null;
+        for (let i = 0; i < this.props.layers.length; i++) {
+            if (this.props.layers[i].klass === ESTATES) {
+                layer = this.props.layers[i];
+                break;
+            }
+        }
+        if (!layer) {
+            this.key += 20*40;
+            return;
+        }
+        console.log('estates layer',layer);
+        let estates = layer.features.features;
+        console.log('estates',estates);
+        for (let i = 0; i < estates.length; i++) {
+            let estate = estates[i];
+            if (estate.geometry && estate.visible) {
+                let coordinates = estate.geometry.coordinates;
+                let multiPolygon = [];
+                for (let k = 0; k < coordinates.length; k++) {
+                    let ps = coordinates[k];
+                    let polygon = [];
+                    for (let j = 0; j < ps.length; j++) {
+                        polygon.push(ps[j]);
+                    }
+                    multiPolygon.push(polygon);
+                }
+                layers.push(<HilitePolygon
+                              key={this.key}
+                              polygon={multiPolygon}
+                              stroke={true}
+                              color={layer.stroke_color}
+                              opacity={layer.opacity}
+                              fillColor={layer.fill_color}
+                              fillOpacity={layer.fill_opacity}
+                              tooltip={estate.properties.nimi}
+                            />);
+                this.key++;
+                
+            }
         }
     }
 
@@ -294,6 +378,9 @@ class MyMap extends Component {
     add_rivers_and_lakes = (layers) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
+            if (layer.klass === ESTATES) {
+                continue;
+            }
             //console.log(layer);
             let from_net = layer.table.substr(0, 4) === 'http';
             let features = layer.features;
@@ -335,12 +422,13 @@ class MyMap extends Component {
     }
 
     render() {
-        //console.log('props',this.props);
+        console.log('render map',this.props);
         this.key = 1;
         let layers = [];
 
         this.set_bg(layers);
         this.add_overlays(layers);
+        this.add_estates(layers);
         this.add_bathymetry(layers);
         this.add_rivers_and_lakes(layers);
         this.add_actions(layers);

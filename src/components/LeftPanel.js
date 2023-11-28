@@ -4,15 +4,18 @@ import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divi
 import { connect } from 'react-redux';
 import {
     BUTTONS, BG,
-    CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKE, CATCHMENT, BATHYMETRY,
+    CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKE, CATCHMENT, ESTATES, BATHYMETRY,
     ACTIONS, RIGHTS, FUNDERS, FEEDBACK,
     hideLayer, hideLayers, showLayer, showLayers, hideLeaf, showLeaf,
     selectFeature,
     selectLake, unselectLake,
     selectBackground,
-    getBathymetry, sendFeedback, setActive, setUnActive, setFocused }
+    getEstateGeom, getBathymetry, sendFeedback, setActive, setUnActive, setFocused, enableHiding,
+    showEstate, hideEstate,
+    fitBoundsFinally
+}
 from '../actions/initAction';
-import { getBounds } from '../reducers/initReducer';
+import { setBounds } from '../reducers/initReducer';
 import L from 'leaflet';
 import { mapsPlaceHolder } from '../index.js';
 import { make_popup_contents, flyTo, setView, fitBounds } from './MyMap';
@@ -39,9 +42,39 @@ class LeftPanel extends Component {
         });
     }
 
+    onHideAll = (b, e) => {
+        let visible = true;
+        for (let layer of Object.values(this.props.layers)) {
+            if (layer.klass === "buttons" && layer.legend === 'HideButton') {
+                visible = layer.visible;
+            }
+        }
+        //console.log('onHideAll',visible);
+        if (visible) {
+            this.props.dispatch(hideLayers());
+        } else {
+            this.props.dispatch(showLayers());
+            if (this.props.focused) {
+                setBounds(this.props.layers);
+            }
+        }
+    }
+
+    toggleFocused = (focused) => {
+        //console.log('toggle focused from', this.props.focused, 'to', focused);
+        this.props.dispatch(setFocused(focused));
+    }
+
+    selectBackground = (e) => {
+        let i = parseInt(e.target.id, 10);
+        if (!this.props.backgrounds[i].visible) {
+            this.props.dispatch(selectBackground(i));
+        }
+    }
+
     handleClick = (e, titleProps) => {
         const {klass} = titleProps;
-        //console.log('click on leaf',klass);
+        console.log('click on leaf',klass);
         let a = 0;
         for (let leaf of Object.values(this.props.leafs)) {
             if (leaf.klass === klass) {
@@ -55,54 +88,37 @@ class LeftPanel extends Component {
         }
     }
 
-    selectBackground = (e) => {
-        let i = parseInt(e.target.id, 10);
-        if (!this.props.backgrounds[i].visible) {
-            this.props.dispatch(selectBackground(i));
-        }
-    }
-
-    setBounds = () => {
-        let bounds = null;
-        for (let i = 0; i < this.props.layers.length; i++) {
-            let layer = this.props.layers[i];
-            let is_point = layer.geometry_type === 'Point';
-            let is_poly = layer.geometry_type === 'Polygon' || layer.geometry_type === 'Polyline';
-            if (layer.table.startsWith('https')) {
-                continue;
-            }
-            if (is_point && layer.visible && layer.features) {
-                //console.log(layer);
-                for (let i = 0; i < layer.features.features.length; i++) {
-                    let feature = layer.features.features[i];
-                    bounds = getBounds(feature.geometry.coordinates, bounds);
-                }
-            } else if (is_poly && layer.visible && layer.features) {
-                //console.log(layer);
-                let feature = layer.features;
-                bounds = getBounds(feature.coordinates);
-            }
-            //console.log('setting bounds',bounds,layer.name,layer.table);
-        }
-        if (bounds) {
-            //console.log('fit bounds',bounds);
-            fitBounds(bounds);
-        }
-    }
-
     onLayerClick = (e) => {
         if (e.target.id === '') {
             return;
         }
         let index = e.target.id;
-        //console.log('click on layer',index);
+        console.log('click on layer',index);
         if (index.includes('show')) {
+            // Turn hide button to allow hiding
+            this.props.dispatch(enableHiding());
+            this.props.dispatch(fitBoundsFinally());
             let klass = index.replace("show ", "");
             if (klass === BATHYMETRY && this.props.lakes) {
                 for (let i = 0; i < this.props.lakes.features.features.length; i++) {
                     let lake = this.props.lakes.features.features[i];
                     if (lake && lake.properties.syvyyskartta && !lake.bathymetry) {
                         this.props.dispatch(getBathymetry(lake));
+                    }
+                }
+            } else if (klass === ESTATES) {
+                for (let i = 0; i < this.props.layers.length; i++) {
+                    if (this.props.layers[i].klass === ESTATES) {
+                        let layer = this.props.layers[i];
+                        let estates = layer.features.features;
+                        console.log('estates',estates);
+                        for (let i = 0; i < estates.length; i++) {
+                            let estate = estates[i];
+                            if (!estate.geometry) {
+                                this.props.dispatch(getEstateGeom(estate));
+                            }
+                        }
+                        break;
                     }
                 }
             }
@@ -113,30 +129,13 @@ class LeftPanel extends Component {
         } else if (this.props.layers[index].visible) {
             this.props.dispatch(hideLayer(index));
         } else {
+            // Turn hide button to allow hiding
+            this.props.dispatch(enableHiding());
             this.props.dispatch(showLayer(index));
         }
         if (this.props.focused) {
-            this.setBounds();
-        }
-    }
-
-    places = {}
-
-    onChangeOfPlace = (e) => {
-        if (this.places.hasOwnProperty(e.target.value)) {
-            let index = this.places[e.target.value];
-            let feature = this.props.features[index];
-            let latlng = feature.latlng;
-            let zoom = 13;
-            setView(latlng, zoom);
-            let popup = make_popup_contents(this.props.popup, feature);
-            let content = renderToString(popup);
-            L.popup()
-                .setLatLng(latlng)
-                .setContent(content)
-                .openOn(mapsPlaceHolder[0]);
-            this.props.dispatch(selectFeature(index));
-            e.target.value = '';
+            //console.log('set bounds from click on layer');
+            setBounds(this.props.layers);
         }
     }
 
@@ -162,6 +161,49 @@ class LeftPanel extends Component {
                     }
                 }
             }
+        }
+    }
+
+    onClickOnEstate = (e) => {
+        let index = parseInt(e.target.id, 10);
+        for (let i = 0; i < this.props.layers.length; i++) {
+            let layer = this.props.layers[i];
+            if (layer.klass === ESTATES) {
+                console.log('layer',layer);
+                let estates = layer.features.features;
+                let estate = estates[index];
+                console.log('click on estate',index,estate.properties.nimi,estate.visible);
+                if (estate.visible) {
+                    this.props.dispatch(hideEstate(estate));
+                } else {
+                    this.props.dispatch(showEstate(estate));
+                }
+                if (!estate.geometry) {
+                    this.props.dispatch(getEstateGeom(estate));
+                }
+                break;
+            }
+        }
+    }
+
+    places = {}
+
+    onChangeOfPlace = (e) => {
+        if (this.places.hasOwnProperty(e.target.value)) {
+            let index = this.places[e.target.value];
+            let feature = this.props.features[index];
+            //console.log('on change of place', feature);
+            let latlng = feature.latlng;
+            let zoom = 13;
+            setView(latlng, zoom);
+            let popup = make_popup_contents(this.props.popup, feature);
+            let content = renderToString(popup);
+            L.popup()
+                .setLatLng(latlng)
+                .setContent(content)
+                .openOn(mapsPlaceHolder[0]);
+            this.props.dispatch(selectFeature(index));
+            e.target.value = '';
         }
     }
 
@@ -227,35 +269,16 @@ class LeftPanel extends Component {
         return <div id={id} className={class_name}>{descr}{img}</div>;
     }
 
-    onHideAll = (b, e) => {
-        let visible = true;
-        for (let layer of Object.values(this.props.layers)) {
-            if (layer.klass === "buttons" && layer.table === "") {
-                visible = layer.visible;
-            }
-        }
-        //console.log('onHideAll',visible);
-        if (visible) {
-            this.props.dispatch(hideLayers());
-        } else {
-            this.props.dispatch(showLayers());
-            if (this.props.focused) {
-                this.setBounds();
-            }
-        }
-    }
-
-    toggleFocused = (focused) => {
-        //console.log('toggle focused from', this.props.focused, 'to', focused);
-        this.props.dispatch(setFocused(focused));
-    }
-
     key = 0;
 
-    add_layers = (layers) => {
+    add_layers = (leafs) => {
+        // add layers to the leafs
+        let klasses = [];
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            let legend = layer.legend;
+            let leaf = leafs[layer.klass];
+            //console.log('layer',layer);
+            let legend = layer.visible ? layer.legend : layer.legend_hidden;
             let h = layer.graphic_height;
             let w = layer.graphic_width;
             let descr = '';
@@ -263,14 +286,35 @@ class LeftPanel extends Component {
             switch (layer.klass) {
             case BUTTONS:
                 c = true;
-                layers[layer.klass].layers.push(layer);
+                leaf.layers.push(layer);
                 break;
-            case MONITORING:
-            case LAKE_ACTIONS:
             case CATCHMENT_ACTIONS:
+            case LAKE_ACTIONS:
+            case MONITORING:
+                leaf.add_show_hide = true;
+                if (layer.visible) {
+                    leaf.layers_visible = true;
+                }
                 break;
-            case LAKE:
+            case ESTATES:
+                leaf.add_show_hide = true;
+                // each feature is a layer in left panel sense
+                let estates = layer.features.features;
+                for (let i = 0; i < estates.length; i++) {
+                    let estate = estates[i];
+                    if (estate.visible) {
+                        leaf.layers_visible = true;
+                        break;
+                    }
+                }
+                c = true;
+                break;
             case CATCHMENT:
+            case LAKE:
+                leaf.add_show_hide = true;
+                if (layer.visible) {
+                    leaf.layers_visible = true;
+                }
                 if (!layer.legend_hidden) {
                     descr = this.layer_descr(layer.visible, i, layer.kuvaus, legend, h, w);
                     legend = null;
@@ -285,29 +329,24 @@ class LeftPanel extends Component {
             if (c) {
                 continue;
             }
-            if (layer.visible) {
-                layers[layer.klass].hidden = false;
-            } else if (legend) {
-                legend = layer.legend_hidden;
-            }
             let img = this.layer_legend(layer.visible, i, legend, h, w);
             let name = this.layer_name(layer.visible, i, layer.name);
             let div =
                 <div key={this.key} onClick={this.onLayerClick} id={i} style={{cursor: 'pointer'}}>
                   {img} {name} <br/> {descr}
                 </div>;
-            layers[layer.klass].layers.push(div);
+            leaf.layers.push(div);
             this.key++;
         }
     }
 
-    add_bg_maps = (layers) => {
+    add_bg_maps = (leafs) => {
         for (let i = 0; i < this.props.backgrounds.length; i++) {
             let bg = this.props.backgrounds[i];
             let legend = this.layer_legend(bg.visible, i);
             let name = this.layer_name(bg.visible, i, bg.otsikko);
             let descr = this.layer_descr(bg.visible, i, bg.kuvaus);
-            layers['bg'].layers.push(
+            leafs['bg'].layers.push(
                 <div key={this.key} onClick={this.selectBackground} id={i} style={{cursor: 'pointer'}}>
                   {legend} {name} <br/> {descr}
                 </div>
@@ -316,7 +355,27 @@ class LeftPanel extends Component {
         }
     }
 
-    add_bathymetry = (layers) => {
+    add_estates = (leafs) => {
+        for (let i = 0; i < this.props.layers.length; i++) {
+            if (this.props.layers[i].klass === ESTATES) {
+                let layer = this.props.layers[i];
+                let estates = layer.features.features;
+                for (let i = 0; i < estates.length; i++) {
+                    let estate = estates[i];
+                    let img = this.layer_legend(estate.visible, estate.id);
+                    leafs[ESTATES].layers.push(
+                        <div key={this.key} onClick={this.onClickOnEstate} id={i} style={{cursor: 'pointer'}}>
+                          {img} {estate.properties.nimi}
+                        </div>
+                    );
+                    this.key++;
+                }
+                break;
+            }
+        }
+    }
+
+    add_bathymetry = (leafs) => {
         for (let i = 0; i < this.props.lakes.features.features.length; i++) {
             let lake = this.props.lakes.features.features[i];
             if (!lake.properties.syvyyskartta) {
@@ -324,12 +383,12 @@ class LeftPanel extends Component {
             }
             let visible = lake.show_bathymetry;
             if (visible) {
-                layers[BATHYMETRY].hidden = false;
+                leafs[BATHYMETRY].hidden = false;
             }
             let img = this.layer_legend(visible, i);
             let name = this.layer_name(visible, i, lake.properties.nimi);
             let descr = this.layer_descr(visible, i, '', lake.properties.syvyyskartta + '.png');
-            layers[BATHYMETRY].layers.push(
+            leafs[BATHYMETRY].layers.push(
                 <div key={this.key} onClick={this.onClickOnLake} id={i} style={{cursor: 'pointer'}}>
                   {img} {name} <br/> {descr}
                 </div>
@@ -338,37 +397,41 @@ class LeftPanel extends Component {
         }
     }
 
-    add_show_hide = (layers) => {
-        for (let [klass, layer] of Object.entries(layers)) {
-            if (!layer.layers || klass === BG || klass === BUTTONS) {
-                continue;
+    add_show_hide = (leafs) => {
+        for (let [klass, leaf] of Object.entries(leafs)) {
+            //console.log('add show hide',klass,layer);
+            if (leaf.add_show_hide) {
+                let imgUrl, name, id;
+                if (leaf.layers_visible) {
+                    imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
+                    id = 'hide ' + klass;
+                    name = <span id={id} className="">Piilota kaikki {leaf.title}</span>;
+                } else {
+                    id = 'show ' + klass;
+                    imgUrl = process.env.PUBLIC_URL + '/media/yes.svg';
+                    name = <span id={id} className="">Näytä kaikki {leaf.title}</span>;
+                }
+                let div =
+                    <div key={this.key} onClick={this.onLayerClick} id={id} style={{cursor: 'pointer'}}>
+                      <img alt="" src={imgUrl} height={21} width={21} id={id}/> {name}
+                    </div>;
+                leaf.layers.unshift(div);
+                this.key++;
             }
-            let imgUrl, name, id;
-            if (layer.hidden) {
-                id = 'show ' + klass;
-                imgUrl = process.env.PUBLIC_URL + '/media/yes.svg';
-                name = <span id={id} className="">Näytä kaikki {layer.title}</span>;
-            } else {
-                imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
-                id = 'hide ' + klass;
-                name = <span id={id} className="">Piilota kaikki {layer.title}</span>;
-            }
-            let div =
-                <div key={this.key} onClick={this.onLayerClick} id={id} style={{cursor: 'pointer'}}>
-                    <img alt="" src={imgUrl} height={21} width={21} id={id}/> {name}
-                </div>;
-            layer.layers.unshift(div);
-            this.key++;
         }
     }
 
     get_datalist = () => {
+        let exists = {};
         let datalist = [];
         for (let i = 0; i < this.props.features.length; i++) {
             let name = this.props.features[i].properties.nimi;
-            this.places[name] = i;
-            datalist.push(<option value={name} key={this.key} />);
-            this.key++;
+            if (!exists[name]) {
+                this.places[name] = i;
+                datalist.push(<option value={name} key={this.key} />);
+                this.key++;
+            }
+            exists[name] = 1;
         }
         return datalist;
     }
@@ -496,6 +559,7 @@ class LeftPanel extends Component {
                     />
                 );
             } else {
+                //console.log('Hide button to show',layer.visible);
                 let words = layer.name.split(' | ');
                 let t = layer.visible ? words[0] : words[1];
                 items.push(
@@ -527,24 +591,24 @@ class LeftPanel extends Component {
         //console.log('leafs', this.props.leafs);
         //console.log('layers', this.props.layers);
 
-        let layers = {};
+        let leafs = {};
         for (let leaf of Object.values(this.props.leafs)) {
-            layers[leaf.klass] = {
+            leafs[leaf.klass] = {
                 layers: [],
                 active: leaf.active > 0,
-                hidden: true,
                 title: leaf.title.toLowerCase(),
             };
         }
-        //console.log('layers', layers);
+        //console.log('leafs', leafs);
 
         this.key = 0;
-        this.add_bg_maps(layers);
-        this.add_layers(layers);
+        this.add_bg_maps(leafs);
+        this.add_layers(leafs);
+        this.add_estates(leafs);
         if (this.props.lakes) {
-            this.add_bathymetry(layers);
+            this.add_bathymetry(leafs);
         }
-        this.add_show_hide(layers);
+        this.add_show_hide(leafs);
         let datalist = this.get_datalist();
         let flags = this.get_flags();
         let kuvaukset = this.get_kuvaukset();
@@ -554,7 +618,7 @@ class LeftPanel extends Component {
         let accs = [];
         for (let leaf of Object.values(this.props.leafs)) {
             if (leaf.klass === BUTTONS) {
-                this.add_buttons(items, layers[leaf.klass]);
+                this.add_buttons(items, leafs[leaf.klass]);
                 continue;
             }
             let active = leaf.active > 0;
@@ -605,7 +669,7 @@ class LeftPanel extends Component {
             default:
                 content =
                     <div className="left-para">
-                      {layers[leaf.klass].layers}
+                      {leafs[leaf.klass].layers}
                     </div>;
             }
             accs.push(

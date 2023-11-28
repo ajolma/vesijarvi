@@ -7,6 +7,7 @@ export const LAKE_ACTIONS = 'lake_actions';
 export const MONITORING = 'monitoring';
 export const LAKE = 'lake';
 export const CATCHMENT = 'catchment';
+export const ESTATES = 'estates';
 export const BATHYMETRY = 'bathymetry';
 export const ACTIONS = 'actions';
 export const RIGHTS = 'rights';
@@ -26,10 +27,16 @@ export const GET_OIKEUDET_FAIL = 'GET_OIKEUDET_FAIL';
 export const GET_BACKGROUND_OK = 'GET_BACKGROUND_OK';
 export const GET_BACKGROUND_FAIL = 'GET_BACKGROUND_FAIL';
 export const SELECT_BACKGROUND = 'SELECT_BACKGROUND';
+export const GET_ESTATES_OK = 'GET_ESTATES_OK';
+export const GET_ESTATES_FAIL = 'GET_ESTATES_FAIL';
+export const GET_ESTATE_GEOM_OK = 'GET_ESTATE_GEOM_OK';
+export const GET_ESTATE_GEOM_FAIL = 'GET_ESTATE_GEOM_FAIL';
 export const GET_BATHYMETRY_OK = 'GET_BATHYMETRY_OK';
 export const GET_BATHYMETRY_FAIL = 'GET_BATHYMETRY_FAIL';
 export const GET_LAKE_AREAS_OK = 'GET_LAKE_AREAS_OK';
 export const GET_LAKE_AREAS_FAIL = 'GET_LAKE_AREAS_FAIL';
+export const SHOW_ESTATE = 'SHOW_ESTATE';
+export const HIDE_ESTATE = 'HIDE_ESTATE';
 export const SHOW_LAYER = 'SHOW_LAYER';
 export const SHOW_LAYERS = 'SHOW_LAYERS';
 export const HIDE_LAYER = 'HIDE_LAYER';
@@ -44,8 +51,17 @@ export const SET_ZOOM = 'SET_ZOOM';
 export const SET_ACTIVE = 'SET_ACTIVE';
 export const SET_UNACTIVE = 'SET_UNACTIVE';
 export const SET_FOCUSED = 'SET_FOCUSED';
+export const ENABLE_HIDING = 'ENABLE_HIDING';
+export const FIT_BOUNDS_FINALLY = 'FIT_BOUNDS_FINALLY';
+
+let fitBoundsFinallyCalled = false;
+let fitBoundsFinallyPending = 0;
 
 export const getLeafs = (props) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending += 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
     return dispatch => {
         let obj = {
             method:"GET",
@@ -72,6 +88,163 @@ export const getLeafs = (props) => {
             .catch((error) => { // 500-599
                 dispatch(getLeafsFail(error));
             });
+    };
+};
+
+export const getLayers = (set) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending += 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let url = server + '/kohteet/' + set;
+        fetch(url, obj)
+            .then((response) => { // 200-499
+                if (response.ok) {
+                    response.json()
+                        .then(data => {
+                            dispatch(getLayersOk(data));
+                            return data.length;
+                        })
+                        .catch(error => {
+                            dispatch(getLayersFail(error));
+                        });
+                } else {
+                    dispatch(getLayersFail(response.status));
+                }
+            })
+            .catch((error) => { // 500-599
+                dispatch(getLayersFail(error));
+            });
+    };
+};
+
+export const getEstates = () => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending += 1;
+    }
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let url = server + '/kohteet/' + ESTATES;
+        fetch(url, obj).then((response) => { // 200-499
+            if (response.ok) {
+                response.json().then(data => {
+                    dispatch(getEstatesOk(data));
+                }).catch(error => {
+                    dispatch(getEstatesFail(error));
+                });
+            } else {
+                dispatch(getEstatesFail(response.status));
+            }
+        }).catch((error) => { // 500-599
+            dispatch(getEstatesFail(error));
+        });
+    };
+};
+
+export const getEstateGeom = (estate) => {
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let url = server + '/kohteet/' + ESTATES + '/' + estate.properties.id;
+        fetch(url, obj).then((response) => { // 200-499
+            if (response.ok) {
+                response.json().then(data => {
+                    dispatch(getEstateGeomOk(data));
+                }).catch(error => {
+                    dispatch(getEstateGeomFail(error));
+                });
+            } else {
+                dispatch(getEstateGeomFail(response.status));
+            }
+        }).catch((error) => { // 500-599
+            dispatch(getEstateGeomFail(error));
+        });
+    };
+};
+
+export const getBathymetry = (lake) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending += 1;
+    }
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let callbacks = [];
+        let url = server + '/kohteet/' + BATHYMETRY + '/syvyyskartta=' + lake.properties.syvyyskartta;
+        callbacks.push(fetch(url, obj));
+        Promise.all(callbacks).then((responses) => { // 200-499
+            let cb2 = [];
+            for (let i = 0; i < responses.length; i++) {
+                let response = responses[i];
+                if (response.ok) {
+                    cb2.push(response.json());
+                    /*
+                    response.json().then(data => {
+                        //dispatch(getBathymetryOk(lake, data));
+                    }).catch(error => {
+                        //dispatch(getBathymetryFail(error));
+                    });
+                    */
+                } else {
+                    //dispatch(getBathymetryFail(response.status));
+                }
+            }
+            Promise.all(cb2).then((datas) => {
+                console.log(datas);
+                dispatch(getBathymetryOk(lake, datas[0]));
+            });
+        }).catch((error) => { // 500-599
+            dispatch(getBathymetryFail(error));
+        });
+    };
+};
+
+export const getLakeAreas = () => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending += 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let url = server + '/kohteet/lake/21';
+        fetch(url, obj).then((response) => { // 200-499
+            if (response.ok) {
+                response.json().then(data => {
+                    dispatch(getLakeAreasOk(data));
+                }).catch(error => {
+                    dispatch(getLakeAreasFail(error));
+                });
+            } else {
+                dispatch(getLakeAreasFail(response.status));
+            }
+        }).catch((error) => { // 500-599
+            dispatch(getLakeAreasFail(error));
+        });
     };
 };
 
@@ -102,114 +275,6 @@ export const getPopup = () => {
             .catch((error) => { // 500-599
                 dispatch(getPopupFail(error));
             });
-    };
-};
-
-export const getLayers = (set) => {
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/kohteet/' + set;
-        fetch(url, obj)
-            .then((response) => { // 200-499
-                if (response.ok) {
-                    response.json()
-                        .then(data => {
-                            dispatch(getLayersOk(data));
-                            return data.length;
-                        })
-                        .catch(error => {
-                            dispatch(getLayersFail(error));
-                        });
-                } else {
-                    dispatch(getLayersFail(response.status));
-                }
-            })
-            .catch((error) => { // 500-599
-                dispatch(getLayersFail(error));
-            });
-    };
-};
-
-export const getOikeudet = () => {
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/oikeudet';
-        fetch(url, obj).then((response) => { // 200-499
-            if (response.ok) {
-                response.json()
-                    .then(data => {
-                        dispatch(getOikeudetOk(data));
-                        return data.length;
-                    })
-                    .catch(error => {
-                        dispatch(getOikeudetFail(error));
-                    });
-            } else {
-                dispatch(getOikeudetFail(response.status));
-            }
-        }).catch((error) => { // 500-599
-            dispatch(getOikeudetFail(error));
-        });
-    };
-};
-
-export const getBathymetry = (lake) => {
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/kohteet/' + BATHYMETRY + '/syvyyskartta=' + lake.properties.syvyyskartta;
-        fetch(url, obj).then((response) => { // 200-499
-            if (response.ok) {
-                response.json().then(data => {
-                    dispatch(getBathymetryOk(lake, data));
-                }).catch(error => {
-                    dispatch(getBathymetryFail(error));
-                });
-            } else {
-                dispatch(getBathymetryFail(response.status));
-            }
-        }).catch((error) => { // 500-599
-            dispatch(getBathymetryFail(error));
-        });
-    };
-};
-
-export const getLakeAreas = () => {
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/kohteet/4/21/jarvialueet';
-        fetch(url, obj).then((response) => { // 200-499
-            if (response.ok) {
-                response.json().then(data => {
-                    dispatch(getLakeAreasOk(data));
-                }).catch(error => {
-                    dispatch(getLakeAreasFail(error));
-                });
-            } else {
-                dispatch(getLakeAreasFail(response.status));
-            }
-        }).catch((error) => { // 500-599
-            dispatch(getLakeAreasFail(error));
-        });
     };
 };
 
@@ -263,6 +328,34 @@ export const getFlags = () => {
     };
 };
 
+export const getOikeudet = () => {
+    return dispatch => {
+        let obj = {
+            method:"GET",
+            headers:{
+                "Accept-Encoding": "gzip"
+            }
+        };
+        let url = server + '/oikeudet';
+        fetch(url, obj).then((response) => { // 200-499
+            if (response.ok) {
+                response.json()
+                    .then(data => {
+                        dispatch(getOikeudetOk(data));
+                        return data.length;
+                    })
+                    .catch(error => {
+                        dispatch(getOikeudetFail(error));
+                    });
+            } else {
+                dispatch(getOikeudetFail(response.status));
+            }
+        }).catch((error) => { // 500-599
+            dispatch(getOikeudetFail(error));
+        });
+    };
+};
+
 export const sendFeedback = (data) => {
     return dispatch => {
         let url = server + '/palaute';
@@ -308,6 +401,10 @@ const sendFeedbackFail = (error) => {
 // Action creators
 
 export const getLeafsOk = (props, data) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
     for (let leaf of Object.values(data)) {
         switch (leaf.klass) {
         case BG:
@@ -322,6 +419,9 @@ export const getLeafsOk = (props, data) => {
         case ACTIONS:
             //console.log(key, data[key]);
             props.dispatch(getLayers(leaf.klass));
+            break;
+        case ESTATES:
+            props.dispatch(getEstates());
             break;
         case BATHYMETRY:
             props.dispatch(getLakeAreas());
@@ -340,14 +440,142 @@ export const getLeafsOk = (props, data) => {
     props.dispatch(getBackground());
     return {
         type: GET_LEAFS_OK,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
         data: data
     };
 }
 
 export const getLeafsFail = (error) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
     return {
         type: GET_LEAFS_FAIL,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
         error: error
+    };
+}
+
+export const getLayersOk = (data) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_LAYERS_OK,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+        data: data
+    };
+}
+
+export const getLayersFail = (error) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_LAYERS_FAIL,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+        error: error
+    };
+}
+
+export const getLakeAreasOk = (data) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_LAKE_AREAS_OK,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+        data: data
+    };
+}
+export const getLakeAreasFail = (error) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_LAKE_AREAS_FAIL,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+        error: error,
+    };
+}
+
+export const getEstatesOk = (data) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+    }
+    return {
+        type: GET_ESTATES_OK,
+        data: data,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+    };
+}
+
+export const getEstatesFail = (error) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+    }
+    return {
+        type: GET_ESTATES_FAIL,
+        error: error,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+    };
+}
+
+export const getEstateGeomOk = (data) => {
+    return {
+        type: GET_ESTATE_GEOM_OK,
+        data: data,
+    };
+}
+
+export const getEstateGeomFail = (error) => {
+    return {
+        type: GET_ESTATE_GEOM_FAIL,
+        error: error,
+    };
+}
+
+export const showEstate = (estate) => {
+    return {
+        type: SHOW_ESTATE,
+        data: estate,
+    };
+}
+
+export const hideEstate = (estate) => {
+    return {
+        type: HIDE_ESTATE,
+        data: estate,
+    };
+}
+
+export const getBathymetryOk = (lake, data) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_BATHYMETRY_OK,
+        lake: lake,
+        data: data,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
+    };
+}
+
+export const getBathymetryFail = (error) => {
+    if (fitBoundsFinallyCalled) {
+        fitBoundsFinallyPending -= 1;
+        //console.log('finally is called, pending is', fitBoundsFinallyPending);
+    }
+    return {
+        type: GET_BATHYMETRY_FAIL,
+        error: error,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
     };
 }
 
@@ -361,21 +589,6 @@ export const getPopupOk = (data) => {
 export const getPopupFail = (error) => {
     return {
         type: GET_POPUP_FAIL,
-        error: error
-    };
-}
-
-export const getLayersOk = (data) => {
-    //console.log(data);
-    return {
-        type: GET_LAYERS_OK,
-        data: data
-    };
-}
-
-export const getLayersFail = (error) => {
-    return {
-        type: GET_LAYERS_FAIL,
         error: error
     };
 }
@@ -422,38 +635,10 @@ export const getBackgroundFail = (error) => {
     };
 }
 
-export const getLakeAreasOk = (data) => {
-    return {
-        type: GET_LAKE_AREAS_OK,
-        data: data
-    };
-}
-export const getLakeAreasFail = (error) => {
-    return {
-        type: GET_LAKE_AREAS_FAIL,
-        error: error
-    };
-}
-
 export const selectBackground = (index) => {
     return {
         type: SELECT_BACKGROUND,
         index: index
-    };
-}
-
-export const getBathymetryOk = (lake, data) => {
-    return {
-        type: GET_BATHYMETRY_OK,
-        lake: lake,
-        data: data
-    };
-}
-
-export const getBathymetryFail = (error) => {
-    return {
-        type: GET_BATHYMETRY_FAIL,
-        error: error
     };
 }
 
@@ -549,5 +734,18 @@ export const setFocused = (focused) => {
     return {
         type: SET_FOCUSED,
         focused: focused,
+    };
+}
+
+export const enableHiding = () => {
+    return {
+        type: ENABLE_HIDING,
+    };
+}
+
+export const fitBoundsFinally = () => {
+    fitBoundsFinallyCalled = true;
+    return {
+        type: 'waiting for finally',
     };
 }
