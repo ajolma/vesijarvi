@@ -2,7 +2,7 @@
 import L from 'leaflet';
 
 import {
-    ESTATES, BATHYMETRY,
+    BUTTONS, ESTATES, BATHYMETRIES,
     GET_LEAFS_OK, GET_LEAFS_FAIL,
     GET_POPUP_OK, GET_POPUP_FAIL,
     GET_LAYERS_OK, GET_LAYERS_FAIL,
@@ -12,16 +12,15 @@ import {
     GET_ESTATES_OK, GET_ESTATES_FAIL,
     GET_ESTATE_GEOM_OK, GET_ESTATE_GEOM_FAIL,
     GET_BATHYMETRY_OK, GET_BATHYMETRY_FAIL,
-    GET_LAKE_AREAS_OK, GET_LAKE_AREAS_FAIL,
     SELECT_BACKGROUND,
     SHOW_LAYER, SHOW_LAYERS, HIDE_LAYER, HIDE_LAYERS,
     SHOW_LEAF, HIDE_LEAF,
-    SHOW_ESTATE, HIDE_ESTATE,
+    SHOW_FEATURE, HIDE_FEATURE,
+    REFRESH,
     SELECT_FEATURE,
     UNSELECT_FEATURE,
     SELECT_LAKE,
     UNSELECT_LAKE,
-    SET_ZOOM,
     SET_ACTIVE,
     SET_UNACTIVE,
     SET_FOCUSED,
@@ -121,7 +120,7 @@ export const setBounds = (layers) => {
         let layer = layers[i];
         let is_point = layer.geometry_type === 'Point';
         let is_poly = layer.geometry_type === 'Polygon' || layer.geometry_type === 'Polyline';
-        if (layer.table.startsWith('https')) {
+        if (layer.table && layer.table.startsWith('https')) {
             continue;
         }
         if (is_point && layer.visible && layer.features) {
@@ -151,7 +150,6 @@ const initialState = {
     layers: [],
     features: [],
     selected_feature: null,
-    lakes: null, // pointer to lakes layer
     backgrounds: [],
     flags: [],
     oikeudet: {},
@@ -183,6 +181,7 @@ function makeMarker(feature, latlng) {
 
 const initReducer = (state=initialState, action) => {
     console.log(action);
+    let leafs;
     let bounds;
     switch (action.type) {
     case GET_LEAFS_OK:
@@ -208,7 +207,6 @@ const initReducer = (state=initialState, action) => {
             error: action.error
         };
     case GET_LAYERS_OK:
-        let lakes = state.lakes;
         let layers = [];
         let features = [];
         for (let i = 0; i < state.layers.length; i++) {
@@ -219,21 +217,35 @@ const initReducer = (state=initialState, action) => {
         for (let i = 0; i < state.features.length; i++) {
             features.push(state.features[i]);
         }
-        let data = action.data;
-        data.sort(function(a, b) {
-            if (a.taso && b.taso) {
-                return a.taso - b.taso;
-            }
-            let n = a.name;
-            if (typeof n === 'undefined') {
-                n = '';
-            }
-            return n.localeCompare(b.name, 'fi');
-        });
-        for (let i = 0; i < data.length; i++) {
-            let layer = action.data[i];
-            if (!lakes && layer.class === LAKES) {
-                lakes = layer;
+        for (let layer of action.data) {
+            layer.id = crypto.randomUUID();
+            if (layer.klass === LAKES) {
+                // add bathymetries as a layer whose features can be individually visible/hidden
+                // they are initially deferred (have no geometry) and not visible
+                console.log('lakes', layer);
+                let from_lakes = [];
+                for (let lake of layer.features.features) {
+                    if (lake.properties.syvyyskartta) {
+                        from_lakes.push({
+                            geometry: null,
+                            properties: {
+                                id: lake.properties.id,
+                                nimi: lake.properties.nimi,
+                                fill_opacity: lake.properties.fill_opacity,
+                            }
+                        });
+                    }
+                }
+                if (from_lakes) {
+                    layers.push({
+                        id: crypto.randomUUID(),
+                        klass: BATHYMETRIES,
+                        features: {
+                            features: from_lakes,
+                        },
+                        visible: false,
+                    });
+                }
             }
             layer.style = makeMarker;
             layers.push(layer);
@@ -269,7 +281,6 @@ const initReducer = (state=initialState, action) => {
         return {
             ...state,
             layers: layers,
-            lakes: lakes,
             features: features,
             error: ''
         };
@@ -280,15 +291,15 @@ const initReducer = (state=initialState, action) => {
         };
     case GET_ESTATES_OK:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            layers.push(state.layers[i]);
+        for (let layer of state.layers) {
+            layers.push(layer);
         }
         // estates is one layer whose features can be individually visible/hidden
         // and they are initially deferred (have no geometry) and not visible
         let layer = action.data[0];
-        let estates = layer.features.features;
-        for (let i = 0; i < estates.length; i++) {
-            estates[i].visible = false;
+        layer.id = crypto.randomUUID();
+        for (let estate of layer.features.features) {
+            estate.visible = false;
         }
         layers.push(layer);
         return {
@@ -302,35 +313,58 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case GET_BATHYMETRY_OK:
-        lakes = null;
+    case GET_ESTATE_GEOM_OK:
         layers = [];
         bounds = null;
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.class === LAKES) {
-                for (let i = 0; i < layer.features.features.length; i++) {
-                    let lake = layer.features.features[i];
-                    //console.log('lake',lake);
-                    if (lake.id === action.lake.id) {
-                        lake.bathymetry = action.data;
-                        lake.bathymetry_bounds = getBounds(lake.bathymetry);
+            if (layer.klass === ESTATES) {
+                for (let estate of layer.features.features) {
+                    if (estate.properties.id === action.data.properties.id) {
+                        estate.geometry = action.data.geometry;
+                        estate.geometry.bounds = getBounds(estate.geometry.coordinates);
+                        estate.visible = true;
                     }
-                    if (lake.bathymetry_bounds && lake.show_bathymetry) {
-                        bounds = expandBounds(bounds, lake.bathymetry_bounds);
+                    if (estate.geometry && estate.geometry.bounds && estate.visible) {
+                        bounds = expandBounds(bounds, estate.geometry.bounds);
                     }
                 }
             }
         }
+        console.log(bounds, state.focused, action.fitBoundsFinallyPending);
         if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
-            //console.log('finally');
             fitBounds(bounds);
         }
         return {
             ...state,
             layers: layers,
-            lakes: lakes,
+            error: ''
+        };
+    case GET_BATHYMETRY_OK:
+        layers = [];
+        bounds = null;
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.klass === BATHYMETRIES) {
+                for (let bathymetry of layer.features.features) {
+                    if (bathymetry.properties.id === action.data.properties.id) {
+                        bathymetry.geometry = action.data.geometry;
+                        bathymetry.geometry.bounds = getBounds(bathymetry.geometry.coordinates);
+                        bathymetry.visible = true;
+                    }
+                    if (bathymetry.geometry &&  bathymetry.geometry.bounds &&  bathymetry.visible) {
+                        bounds = expandBounds(bounds,  bathymetry.geometry.bounds);
+                    }
+                }
+            }
+        }
+        console.log(bounds, state.focused, action.fitBoundsFinallyPending);
+        if (bounds && state.focused && action.fitBoundsFinallyPending == 0) {
+            fitBounds(bounds);
+        }
+        return {
+            ...state,
+            layers: layers,
             error: ''
         };
     case GET_BATHYMETRY_FAIL:
@@ -409,57 +443,28 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case GET_ESTATE_GEOM_OK:
-        layers = [];
-        bounds = null;
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            layers.push(layer);
-            if (layer.klass === ESTATES) {
-                let estates = layer.features.features;
-                for (let i = 0; i < estates.length; i++) {
-                    let estate = estates[i];
-                    //console.log('estate',estate);
-                    if (estate.properties.id === action.data.properties.id) {
-                        estate.geometry = action.data.geometry;
-                        estate.geometry.bounds = getBounds(estate.geometry.coordinates);
-                    }
-                    if (estate.geometry && estate.geometry.bounds && estate.visible) {
-                        bounds = expandBounds(bounds, estate.geometry.bounds);
-                    }
-                }
-            }
-        }
-        if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
-            fitBounds(bounds);
-        }
-        return {
-            ...state,
-            layers: layers,
-            error: ''
-        };
     case GET_ESTATE_GEOM_FAIL:
         return {
             ...state,
             error: action.error
         };
-    case SHOW_ESTATE:
+    case SHOW_FEATURE:
         layers = [];
         bounds = null;
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.klass === ESTATES) {
-                let estates = layer.features.features;
-                for (let i = 0; i < estates.length; i++) {
-                    let estate = estates[i];
-                    if (estate.properties.id === action.data.properties.id) {
-                        estate.visible = true;
+            if (layer.klass === action.klass) {
+                for (let feature of layer.features.features) {
+                    if (feature.properties.id === action.feature.properties.id) {
+                        feature.visible = true;
                     }
-                    if (estate.visible && estate.geometry && estate.geometry.bounds) {
-                        bounds = expandBounds(bounds, estate.geometry.bounds);
+                    if (feature.visible && feature.geometry && feature.geometry.bounds) {
+                        bounds = expandBounds(bounds, feature.geometry.bounds);
                     }
                 }
+            }
+            if (layer.klass === BUTTONS && layer.legend === 'HideButton') {
+                layer.visible = true;
             }
         }
         if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
@@ -470,17 +475,14 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case HIDE_ESTATE:
+    case HIDE_FEATURE:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.klass === ESTATES) {
-                let estates = layer.features.features;
-                for (let i = 0; i < estates.length; i++) {
-                    let estate = estates[i];
-                    if (estate.properties.id === action.data.properties.id) {
-                        estate.visible = false;
+            if (layer.klass === action.klass) {
+                for (let feature of layer.features.features) {
+                    if (feature.properties.id === action.feature.properties.id) {
+                        feature.visible = false;
                     }
                 }
             }
@@ -489,43 +491,17 @@ const initReducer = (state=initialState, action) => {
             ...state,
             layers: layers,
             error: ''
-        };
-    case GET_LAKE_AREAS_OK:
-        lakes = null;
-        layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            layers.push(layer);
-            if (layer.class === LAKES) {
-                lakes = state.layers[i];
-                for (let i = 0; i < lakes.features.features.length; i++) {
-                    let lake = lakes.features.features[i];
-                    if (action.data[lake.id]) {
-                        lake.area = action.data[lake.id];
-                    }
-                }
-            }
-        }
-        return {
-            ...state,
-            layers: layers,
-            lakes: lakes,
-            error: ''
-        };
-    case GET_LAKE_AREAS_FAIL:
-        return {
-            ...state,
-            error: action.error
         };
     case SHOW_LAYER:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            //console.log(i,layer.klass,layer.name);
-            if (String(i) === action.index) {
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.id === action.layer.id) {
                 layer.visible = true;
             }
-            layers.push(layer);
+            if (layer.klass === BUTTONS && layer.legend === 'HideButton') {
+                layer.visible = true;
+            }
         }
         return {
             ...state,
@@ -534,12 +510,14 @@ const initReducer = (state=initialState, action) => {
         };
     case SHOW_LAYERS:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
+            layers.push(layer);
             if (initiallyVisible[layer.name]) {
                 layer.visible = true;
             }
-            layers.push(layer);
+            if (layer.klass === BUTTONS && layer.legend === 'HideButton') {
+                layer.visible = true;
+            }
         }
         return {
             ...state,
@@ -548,12 +526,11 @@ const initReducer = (state=initialState, action) => {
         };
     case HIDE_LAYER:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            if (String(i) === action.index) {
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.id === action.layer.id) {
                 layer.visible = false;
             }
-            layers.push(layer);
         }
         return {
             ...state,
@@ -562,13 +539,13 @@ const initReducer = (state=initialState, action) => {
         };
     case HIDE_LAYERS:
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.class === LAKES) {
+            if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
                 for (let j = 0; j < layer.features.features.length; j++) {
-                    let lake = layer.features.features[j];
-                    lake.show_bathymetry = false;
+                    for (let feature of layer.features.features) {
+                        feature.visible = false;
+                    }
                 }
             }
             layer.visible = false;
@@ -579,32 +556,19 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SHOW_LEAF:
-        if (action.klass === BATHYMETRY) {
-            layers = [];
-            for (let i = 0; i < state.layers.length; i++) {
-                let layer = state.layers[i];
-                layers.push(layer);
-                if (layer.class === LAKES) {
-                    for (let j = 0; j < layer.features.features.length; j++) {
-                        let lake = layer.features.features[j];
-                        lake.show_bathymetry = true;
-                    }
-                }
-            }
-            return {
-                ...state,
-                layers: layers,
-                error: ''
-            };
-        }
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            //console.log('show leaf?',layer.klass,action.klass);
-            if (layer.klass === action.klass) {
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.klass !== action.klass) {
+                continue;
+            }
+            if (action.klass === BATHYMETRIES || action.klass === ESTATES) {
+                for (let feature of layer.features.features) {
+                    feature.visible = true;
+                }
+            } else {
                 layer.visible = true;
             }
-            layers.push(layer);
         }
         return {
             ...state,
@@ -612,30 +576,28 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case HIDE_LEAF:
-        if (action.klass === BATHYMETRY) {
-            layers = [];
-            for (let i = 0; i < state.layers.length; i++) {
-                let layer = state.layers[i];
-                layers.push(layer);
-                if (layer.class === LAKES) {
-                    for (let j = 0; j < layer.features.features.length; j++) {
-                        let lake = layer.features.features[j];
-                        lake.show_bathymetry = false;
-                    }
-                }
-            }
-            return {
-                ...state,
-                layers: layers,
-                error: ''
-            };
-        }
         layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            if (layer.klass === action.klass) {
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.klass !== action.klass) {
+                continue;
+            }
+            if (action.klass === BATHYMETRIES || action.klass === ESTATES) {
+                for (let feature of layer.features.features) {
+                    feature.visible = false;
+                }
+            } else {
                 layer.visible = false;
             }
+        }
+        return {
+            ...state,
+            layers: layers,
+            error: ''
+        };
+    case REFRESH:
+        layers = [];
+        for (let layer of state.layers) {
             layers.push(layer);
         }
         return {
@@ -655,53 +617,13 @@ const initReducer = (state=initialState, action) => {
             selected_feature: null,
             error: ''
         };
-    case SELECT_LAKE:
-        lakes = null;
-        layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            layers.push(state.layers[i]);
-            if (state.layers[i].class === LAKES) {
-                lakes = state.layers[i];
-                let lake = lakes.features.features[action.index];
-                lake.show_bathymetry = true;
-            }
-        }
-        return {
-            ...state,
-            layers: layers,
-            lakes: lakes,
-            error: ''
-        };
-    case UNSELECT_LAKE:
-        lakes = null;
-        layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            layers.push(state.layers[i]);
-            if (state.layers[i].class === LAKES) {
-                lakes = state.layers[i];
-                let lake = lakes.features.features[action.index];
-                lake.show_bathymetry = false;
-            }
-        }
-        return {
-            ...state,
-            layers: layers,
-            lakes: lakes,
-            error: ''
-        };
-    case SET_ZOOM:
-        return {
-            ...state,
-            zoom: action.level,
-            error: ''
-        };
     case SET_ACTIVE:
-        let leafs = {};
-        for (let [i, leaf] of Object.entries(state.leafs)) {
+        leafs = [];
+        for (let leaf of state.leafs) {
             if (leaf.klass === action.klass) {
                 leaf.active = 1;
             }
-            leafs[i] = leaf;
+            leafs.push(leaf);
         }
         return {
             ...state,
@@ -709,12 +631,12 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SET_UNACTIVE:
-        leafs = {};
-        for (let [i, leaf] of Object.entries(state.leafs)) {
+        leafs = [];
+        for (let leaf of state.leafs) {
             if (leaf.klass === action.klass) {
                 leaf.active = 0;
             }
-            leafs[i] = leaf;
+            leafs.push(leaf);
         }
         return {
             ...state,

@@ -1,3 +1,4 @@
+import L from 'leaflet';
 import React, { Component, useRef, useMemo } from 'react';
 import { renderToString } from 'react-dom/server';
 import { connect } from 'react-redux';
@@ -6,7 +7,7 @@ import { MapContainer, useMap, TileLayer, GeoJSON, Popup,
          Polygon, Polyline, Tooltip, ScaleControl
        } from 'react-leaflet';
 import './MyMap.css';
-import { ESTATES } from '../actions/initAction';
+import { LAKES, CATCHMENT, BATHYMETRIES, ESTATES } from '../actions/initAction';
 
 export const make_popup_contents = (popup, feature) => {
     let items = [];
@@ -171,7 +172,7 @@ const HilitePolygon = (props) => {
         }),
         [props.fill_color]
     );
-    console.log(props);
+    //console.log(props);
     return (
         <Polygon ref={polygonRef}
                  eventHandlers={eventHandlers}
@@ -217,7 +218,7 @@ class MyMap extends Component {
     add_overlays = (layers) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             let layer = this.props.layers[i];
-            if (layer.visible && layer.table.startsWith('https')) {
+            if (layer.visible && layer.table && layer.table.startsWith('https')) {
                 //console.log('overlay',layer);
                 layers.push(
                     <TileLayer
@@ -244,9 +245,9 @@ class MyMap extends Component {
             this.key += 20*40;
             return;
         }
-        console.log('estates layer',layer);
+        //console.log('estates layer',layer);
         let estates = layer.features.features;
-        console.log('estates',estates);
+        //console.log('estates',estates);
         for (let i = 0; i < estates.length; i++) {
             let estate = estates[i];
             if (estate.geometry && estate.visible) {
@@ -277,35 +278,41 @@ class MyMap extends Component {
     }
 
     add_bathymetry = (layers) => {
-        let lakes = this.props.lakes;
-        if (!lakes) {
-            this.key += 20*40;
-            return;
-        }
-        for (let i = 0; i < lakes.features.features.length; i++) {
-            let lake = lakes.features.features[i];
-            //console.log('lake',lake);
-            if (lake.bathymetry && lake.show_bathymetry) {
-                //console.log('add lake bathymetry',lake);
-                let fill_opacity = lake.properties.fill_opacity;
-                let stroke = false;
-                for (let k = 0; k < lake.bathymetry.length; k++) {
-                    let ps = lake.bathymetry[k];
-                    let polygon = [];
-                    for (let j = 0; j < ps.length; j++) {
-                        polygon.push(ps[j]);
+        for (let layer of this.props.layers) {
+            if (layer.klass === BATHYMETRIES) {
+                for (let bathymetry of layer.features.features) {
+                    if (bathymetry.geometry && bathymetry.visible) {
+                        let fill_opacity = bathymetry.properties.fill_opacity;
+                        let stroke = false;
+                        //console.log('posit',bathymetry.geometry);
+                        for (let coords of bathymetry.geometry.coordinates) {
+                            layers.push(
+                                <Polygon key={this.key}
+                                         fillColor="blue"
+                                         fillOpacity={fill_opacity}
+                                         stroke={stroke}
+                                         opacity={fill_opacity}
+                                         positions={coords}>
+                                </Polygon>
+                            );
+                            this.key++;
+                        }
+                        /*
+                        layers.push(
+                            <Polygon key={this.key}
+                                     fillColor="blue"
+                                     fillOpacity={bathymetry.properties.fill_opacity}
+                                     stroke={false}
+                                     opacity={bathymetry.properties.fill_opacity}
+                                     positions={bathymetry.geometry.coordinates}
+                            >
+                            </Polygon>
+                        );
+                        this.key++;
+                        */
                     }
-                    layers.push(
-                        <Polygon key={this.key}
-                                 fillColor="blue"
-                                 fillOpacity={fill_opacity}
-                                 stroke={stroke}
-                                 opacity={fill_opacity}
-                                 positions={polygon}>
-                        </Polygon>
-                    );
-                    this.key++;
                 }
+                break;
             }
         }
     }
@@ -376,12 +383,11 @@ class MyMap extends Component {
     }
 
     add_rivers_and_lakes = (layers) => {
-        for (let i = 0; i < this.props.layers.length; i++) {
-            let layer = this.props.layers[i];
-            if (layer.klass === ESTATES) {
+        for (let layer of this.props.layers) {           
+            if (layer.klass !== LAKES && layer.klass !== CATCHMENT) {
                 continue;
             }
-            //console.log(layer);
+            //console.log('draw',layer);
             let from_net = layer.table.substr(0, 4) === 'http';
             let features = layer.features;
             if (layer.visible && !from_net && features && features.coordinates) {
@@ -408,7 +414,7 @@ class MyMap extends Component {
             let features = layer.features || [];
             let is_point = layer.geometry_type === 'Point';
             if (is_point && layer.visible && features) {
-                //console.log(features);
+                //console.log('actions',features);
                 layers.push(
                     <GeoJSON key={this.key}
                              data={features}
@@ -422,7 +428,21 @@ class MyMap extends Component {
     }
 
     render() {
-        console.log('render map',this.props);
+        let visible = 0;
+        for (let layer of this.props.layers) {
+            if (layer.klass === ESTATES) {
+                for (let feature of layer.features.features) {
+                    if (feature.visible) {
+                        visible += 1;
+                    }
+                }
+            } else {
+                if (layer.visible) {
+                    visible += 1;
+                }
+            }
+        }
+        console.log('render map',visible);
         this.key = 1;
         let layers = [];
 
@@ -454,7 +474,6 @@ const mapStateToProps = (state) => {
         zoom: state.init.zoom,
         popup: state.init.popup,
         layers: state.init.layers,
-        lakes: state.init.lakes,
         features: state.init.features,
         selected_feature: state.init.selected_feature,
         backgrounds: state.init.backgrounds,
