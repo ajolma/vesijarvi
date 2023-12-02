@@ -29,10 +29,8 @@ export const GET_BACKGROUND_FAIL = 'GET_BACKGROUND_FAIL';
 export const SELECT_BACKGROUND = 'SELECT_BACKGROUND';
 export const GET_ESTATES_OK = 'GET_ESTATES_OK';
 export const GET_ESTATES_FAIL = 'GET_ESTATES_FAIL';
-export const GET_ESTATE_GEOM_OK = 'GET_ESTATE_GEOM_OK';
-export const GET_ESTATE_GEOM_FAIL = 'GET_ESTATE_GEOM_FAIL';
-export const GET_BATHYMETRY_OK = 'GET_BATHYMETRY_OK';
-export const GET_BATHYMETRY_FAIL = 'GET_BATHYMETRY_FAIL';
+export const GET_FEATURE_GEOMETRY_OK = 'GET_FEATURE_GEOMETRY_OK';
+export const GET_FEATURE_GEOMETRY_FAIL = 'GET_FEATURE_GEOMETRY_FAIL';
 export const SHOW_FEATURE = 'SHOW_FEATURE';
 export const HIDE_FEATURE = 'HIDE_FEATURE';
 export const SHOW_LAYER = 'SHOW_LAYER';
@@ -41,27 +39,19 @@ export const HIDE_LAYER = 'HIDE_LAYER';
 export const HIDE_LAYERS = 'HIDE_LAYERS';
 export const HIDE_LEAF = 'HIDE_LEAF';
 export const SHOW_LEAF = 'SHOW_LEAF';
-export const REFRESH = 'REFERESH';
 export const SELECT_FEATURE = 'SELECT_FEATURE';
 export const UNSELECT_FEATURE = 'UNSELECT_FEATURE';
-export const SELECT_LAKE = 'SELECT_LAKE';
-export const UNSELECT_LAKE = 'UNSELECT_LAKE';
 export const SET_ACTIVE = 'SET_ACTIVE';
 export const SET_UNACTIVE = 'SET_UNACTIVE';
 export const SET_FOCUSED = 'SET_FOCUSED';
-export const ENABLE_HIDING = 'ENABLE_HIDING';
 export const FIT_BOUNDS_FINALLY = 'FIT_BOUNDS_FINALLY';
 
 let fitBoundsFinallyCalled = false;
 let fitBoundsFinallyPending = 0;
 
-let refreshFinallyCalled = false;
-let refreshFinallyPending = 0;
-
 export const getLeafs = (props) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending += 1;
-        //console.log('finally is called, pending is', fitBoundsFinallyPending);
     }
     return dispatch => {
         let obj = {
@@ -95,7 +85,6 @@ export const getLeafs = (props) => {
 export const getLayers = (set) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending += 1;
-        //console.log('finally is called, pending is', fitBoundsFinallyPending);
     }
     return dispatch => {
         let obj = {
@@ -154,35 +143,7 @@ export const getEstates = () => {
     };
 };
 
-export const getEstateGeom = (estate) => {
-    if (fitBoundsFinallyCalled) {
-        fitBoundsFinallyPending += 1;
-    }
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/kohteet/' + ESTATES + '/' + estate.properties.id;
-        fetch(url, obj).then((response) => { // 200-499
-            if (response.ok) {
-                response.json().then(data => {
-                    dispatch(getEstateGeomOk(data));
-                }).catch(error => {
-                    dispatch(getEstateGeomFail(error));
-                });
-            } else {
-                dispatch(getEstateGeomFail(response.status));
-            }
-        }).catch((error) => { // 500-599
-            dispatch(getEstateGeomFail(error));
-        });
-    };
-};
-
-export const getBathymetry = (lake) => {
+export const getFeatureGeometry = (feature, klass) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending += 1;
     }
@@ -194,32 +155,21 @@ export const getBathymetry = (lake) => {
             }
         };
         let callbacks = [];
-        //let url = server + '/kohteet/' + BATHYMETRIES + '/syvyyskartta=' + lake.properties.syvyyskartta;
-        let url = server + '/kohteet/' + BATHYMETRIES + '/' + lake.properties.id;
+        let url = `${server}/kohteet/${klass}/${feature.properties.id}`;
         callbacks.push(fetch(url, obj));
-        Promise.all(callbacks).then((responses) => { // 200-499
+        Promise.all(callbacks).then((responses) => {
             let cb2 = [];
             for (let i = 0; i < responses.length; i++) {
                 let response = responses[i];
                 if (response.ok) {
                     cb2.push(response.json());
-                    /*
-                    response.json().then(data => {
-                        //dispatch(getBathymetryOk(lake, data));
-                    }).catch(error => {
-                        //dispatch(getBathymetryFail(error));
-                    });
-                    */
-                } else {
-                    //dispatch(getBathymetryFail(response.status));
                 }
             }
             Promise.all(cb2).then((datas) => {
-                console.log(datas);
-                dispatch(getBathymetryOk(datas[0]));
+                dispatch(getFeatureGeometryOk(datas[0], klass));
             });
-        }).catch((error) => { // 500-599
-            dispatch(getBathymetryFail(error));
+        }).catch((error) => {
+            dispatch(getFeatureGeometryFail(error));
         });
     };
 };
@@ -419,7 +369,6 @@ export const getLeafsOk = (props, data) => {
 export const getLeafsFail = (error) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending -= 1;
-        //console.log('finally is called, pending is', fitBoundsFinallyPending);
     }
     return {
         type: GET_LEAFS_FAIL,
@@ -431,7 +380,6 @@ export const getLeafsFail = (error) => {
 export const getLayersOk = (data) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending -= 1;
-        //console.log('finally is called, pending is', fitBoundsFinallyPending);
     }
     return {
         type: GET_LAYERS_OK,
@@ -443,7 +391,6 @@ export const getLayersOk = (data) => {
 export const getLayersFail = (error) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending -= 1;
-        //console.log('finally is called, pending is', fitBoundsFinallyPending);
     }
     return {
         type: GET_LAYERS_FAIL,
@@ -474,45 +421,24 @@ export const getEstatesFail = (error) => {
     };
 }
 
-export const getEstateGeomOk = (data) => {
+export const getFeatureGeometryOk = (data, klass) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending -= 1;
     }
     return {
-        type: GET_ESTATE_GEOM_OK,
+        type: GET_FEATURE_GEOMETRY_OK,
         data: data,
+        klass: klass,
         fitBoundsFinallyPending: fitBoundsFinallyPending,
     };
 }
 
-export const getEstateGeomFail = (error) => {
+export const getFeatureGeometryFail = (error) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending -= 1;
     }
     return {
-        type: GET_ESTATE_GEOM_FAIL,
-        error: error,
-        fitBoundsFinallyPending: fitBoundsFinallyPending,
-    };
-}
-
-export const getBathymetryOk = (data) => {
-    if (fitBoundsFinallyCalled) {
-        fitBoundsFinallyPending -= 1;
-    }
-    return {
-        type: GET_BATHYMETRY_OK,
-        data: data,
-        fitBoundsFinallyPending: fitBoundsFinallyPending,
-    };
-}
-
-export const getBathymetryFail = (error) => {
-    if (fitBoundsFinallyCalled) {
-        fitBoundsFinallyPending -= 1;
-    }
-    return {
-        type: GET_BATHYMETRY_FAIL,
+        type: GET_FEATURE_GEOMETRY_FAIL,
         error: error,
         fitBoundsFinallyPending: fitBoundsFinallyPending,
     };
@@ -637,36 +563,16 @@ export const hideLeaf = (klass) => {
     };
 }
 
-export const refresh = () => {
-    return {
-        type: REFRESH,
-    };
-}
-
-export const selectFeature = (index) => {
+export const selectFeature = (feature) => {
     return {
         type: SELECT_FEATURE,
-        index: index
+        feature: feature
     };
 }
 
 export const unselectFeature = () => {
     return {
         type: UNSELECT_FEATURE
-    };
-}
-
-export const selectLake = (index) => {
-    return {
-        type: SELECT_LAKE,
-        index: index
-    };
-}
-
-export const unselectLake = (index) => {
-    return {
-        type: UNSELECT_LAKE,
-        index: index
     };
 }
 
@@ -691,22 +597,9 @@ export const setFocused = (focused) => {
     };
 }
 
-export const enableHiding = () => {
-    return {
-        type: ENABLE_HIDING,
-    };
-}
-
 export const fitBoundsFinally = () => {
     fitBoundsFinallyCalled = true;
     return {
         type: 'waiting for finally',
-    };
-}
-
-export const refreshFinally = () => {
-    refreshFinallyCalled = true;
-    return {
-        type: 'waiting to refresh finally',
     };
 }

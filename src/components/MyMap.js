@@ -4,25 +4,13 @@ import { renderToString } from 'react-dom/server';
 import { connect } from 'react-redux';
 import { Header, Table } from 'semantic-ui-react';
 import { MapContainer, useMap, TileLayer, GeoJSON, Popup,
-         Polygon, Polyline, Tooltip, ScaleControl
+         Polygon, Polyline, Tooltip, ScaleControl, Marker
        } from 'react-leaflet';
 import './MyMap.css';
 import { LAKES, CATCHMENT, BATHYMETRIES, ESTATES } from '../actions/initAction';
 
 export const make_popup_contents = (popup, feature) => {
     let items = [];
-    let show = false;
-    if (feature.properties.kohdetyyppi === 'Vesijärveen laskevien jokien valuma-alueita'
-        && feature.properties.nimi === 'Hammonjoen va') {
-        //console.log('popup',popup);
-        /*
-        for (let p of Object.values(popup)) {
-            console.log('popup', p.sarake, p);
-        }
-        */
-        console.log('feature',feature);
-        show = true;
-    }
     let title = feature.properties.nimi;
     let header = (
         <Header as='h4'>
@@ -43,11 +31,9 @@ export const make_popup_contents = (popup, feature) => {
         } else {
             value = String(value);
         }
-        if (show) console.log(sarake,otsikko,value,typeOfValue);
         if (otsikko === 'kuvat') {
             images = [];
             let filenames = value.split(/,/);
-            //console.log(value,filenames.length);
             for (let i = 0; i < filenames.length; i++) {
                 let name = filenames[i];
                 let src = name, scale = false;
@@ -103,7 +89,7 @@ export const make_popup_contents = (popup, feature) => {
             value = <a href={value} target='_blank' rel='noreferrer'>{otsikko}</a>;
         } else if (value.includes('href')) {
             let m = /<a (.*)?<\/a>/.exec(value);
-            let href = /href="(.*)?" /.exec(m[1]);
+            let href = /href="(.*)?"/.exec(m[1]);
             let t = />(.*)?</.exec(m[0]);
             let x = value.replace(m[0], '|').split('|');
             value = <div>{x[0]}<a href={href[1]} target='_blank' rel='noreferrer'>{t[1]}</a>{x[1]}</div>;
@@ -131,7 +117,6 @@ export const make_popup_contents = (popup, feature) => {
 let map = null;
 
 export function flyTo(latlng) {
-    //console.log('flyTo', latlng);
     map.flyTo(latlng);
 }
 
@@ -141,17 +126,14 @@ export function getMapZoom() {
 }
 
 export function setZoom(zoom) {
-    //console.log('setZoom', zoom);
     map.setZoom(zoom);
 }
 
 export function setView(latlng, zoom) {
-    //console.log('set view', latlng, zoom);
     map.setView(latlng, zoom);
 }
 
 export function fitBounds(bounds) {
-    //console.log('fitBounds', bounds);
     map.fitBounds(bounds);
 }
 
@@ -172,7 +154,6 @@ const HilitePolygon = (props) => {
         }),
         [props.fill_color]
     );
-    //console.log(props);
     return (
         <Polygon ref={polygonRef}
                  eventHandlers={eventHandlers}
@@ -202,8 +183,7 @@ class MyMap extends Component {
     key = 1;
 
     set_bg = (layers) => {
-        for (let i = 0; i < this.props.backgrounds.length; i++) {
-            let bg = this.props.backgrounds[i];
+        for (let bg of this.props.backgrounds) {
             if (bg.visible) {
                 layers.push(
                     <TileLayer key={this.key}
@@ -216,10 +196,8 @@ class MyMap extends Component {
     }
 
     add_overlays = (layers) => {
-        for (let i = 0; i < this.props.layers.length; i++) {
-            let layer = this.props.layers[i];
+        for (let layer of this.props.layers) {
             if (layer.visible && layer.table && layer.table.startsWith('https')) {
-                //console.log('overlay',layer);
                 layers.push(
                     <TileLayer
                         key={this.key}
@@ -234,45 +212,34 @@ class MyMap extends Component {
     }
 
     add_estates = (layers) => {
-        let layer = null;
-        for (let i = 0; i < this.props.layers.length; i++) {
-            if (this.props.layers[i].klass === ESTATES) {
-                layer = this.props.layers[i];
-                break;
-            }
-        }
-        if (!layer) {
-            this.key += 20*40;
-            return;
-        }
-        //console.log('estates layer',layer);
-        let estates = layer.features.features;
-        //console.log('estates',estates);
-        for (let i = 0; i < estates.length; i++) {
-            let estate = estates[i];
-            if (estate.geometry && estate.visible) {
-                let coordinates = estate.geometry.coordinates;
-                let multiPolygon = [];
-                for (let k = 0; k < coordinates.length; k++) {
-                    let ps = coordinates[k];
-                    let polygon = [];
-                    for (let j = 0; j < ps.length; j++) {
-                        polygon.push(ps[j]);
+        for (let layer of this.props.layers) {
+            if (layer.klass === ESTATES) {
+                for (let feature of layer.features.features) {
+                    if (feature.geometry && feature.visible) {
+                        let coordinates = feature.geometry.coordinates;
+                        let multiPolygon = [];
+                        for (let k = 0; k < coordinates.length; k++) {
+                            let ps = coordinates[k];
+                            let polygon = [];
+                            for (let j = 0; j < ps.length; j++) {
+                                polygon.push(ps[j]);
+                            }
+                            multiPolygon.push(polygon);
+                        }
+                        layers.push(<HilitePolygon
+                                      key={this.key}
+                                      polygon={multiPolygon}
+                                      stroke={true}
+                                      color={layer.stroke_color}
+                                      opacity={layer.opacity}
+                                      fillColor={layer.fill_color}
+                                      fillOpacity={layer.fill_opacity}
+                                      tooltip={feature.properties.nimi}
+                                    />);
+                        this.key++;
                     }
-                    multiPolygon.push(polygon);
                 }
-                layers.push(<HilitePolygon
-                              key={this.key}
-                              polygon={multiPolygon}
-                              stroke={true}
-                              color={layer.stroke_color}
-                              opacity={layer.opacity}
-                              fillColor={layer.fill_color}
-                              fillOpacity={layer.fill_opacity}
-                              tooltip={estate.properties.nimi}
-                            />);
-                this.key++;
-                
+                break;
             }
         }
     }
@@ -284,7 +251,6 @@ class MyMap extends Component {
                     if (bathymetry.geometry && bathymetry.visible) {
                         let fill_opacity = bathymetry.properties.fill_opacity;
                         let stroke = false;
-                        //console.log('posit',bathymetry.geometry);
                         for (let coords of bathymetry.geometry.coordinates) {
                             layers.push(
                                 <Polygon key={this.key}
@@ -297,19 +263,6 @@ class MyMap extends Component {
                             );
                             this.key++;
                         }
-                        /*
-                        layers.push(
-                            <Polygon key={this.key}
-                                     fillColor="blue"
-                                     fillOpacity={bathymetry.properties.fill_opacity}
-                                     stroke={false}
-                                     opacity={bathymetry.properties.fill_opacity}
-                                     positions={bathymetry.geometry.coordinates}
-                            >
-                            </Polygon>
-                        );
-                        this.key++;
-                        */
                     }
                 }
                 break;
@@ -318,6 +271,7 @@ class MyMap extends Component {
     }
 
     add_river = (layers, layer) => {
+        //console.log('river', layer);
         let c = layer.features.coordinates;
         let p = layer.features.properties;
         for (let k = 0; k < c.length; k++) {
@@ -383,11 +337,10 @@ class MyMap extends Component {
     }
 
     add_rivers_and_lakes = (layers) => {
-        for (let layer of this.props.layers) {           
+        for (let layer of this.props.layers) {
             if (layer.klass !== LAKES && layer.klass !== CATCHMENT) {
                 continue;
             }
-            //console.log('draw',layer);
             let from_net = layer.table.substr(0, 4) === 'http';
             let features = layer.features;
             if (layer.visible && !from_net && features && features.coordinates) {
@@ -402,47 +355,44 @@ class MyMap extends Component {
         }
     }
 
-    onEachFeature = (feature, layer) => {
-        //console.log('on each f',map);
-        let popup = make_popup_contents(this.props.popup, feature);
-        layer.bindPopup(renderToString(popup));
-    }
-
     add_actions = (layers) => {
-        for (let i = 0; i < this.props.layers.length; i++) {
-            let layer = this.props.layers[i];
-            let features = layer.features || [];
-            let is_point = layer.geometry_type === 'Point';
-            if (is_point && layer.visible && features) {
-                //console.log('actions',features);
-                layers.push(
-                    <GeoJSON key={this.key}
-                             data={features}
-                             pointToLayer={layer.style}
-                             onEachFeature={this.onEachFeature}>
-                    </GeoJSON>
-                );
+        for (let layer of this.props.layers) {
+            let icon = null, icon_per_feature = false;
+            if (layer.legend && (layer.legend.includes('.svg') || layer.legend.includes('.png'))) {
+                icon = L.icon({
+                    iconUrl: process.env.PUBLIC_URL + '/media/' + layer.legend,
+                    iconSize: [layer.graphic_width, layer.graphic_height]
+                });
+            } else if (layer.legend === 'kohteesta') {
+                icon_per_feature = true;
+            } else {
+                continue;
             }
-            this.key++;
+            if (layer.visible && layer.geometry_type === 'Point') {
+                for (let feature of layer.features.features) {
+                    if (icon_per_feature) {
+                        let html = feature.properties.nimi;
+                        icon = L.divIcon({
+                            className: 'my-div-icon',
+                            html: html,
+                        });
+                        console.log('paikannimi',feature);
+                    }
+                    let popup = make_popup_contents(this.props.popup, feature);
+                    layers.push(
+                        <Marker key={this.key}
+                                position={feature.geometry.coordinates}
+                                icon={icon}
+                        >
+                          <Popup>{popup}</Popup>
+                        </Marker>);
+                    this.key++;
+                }
+            }
         }
     }
 
     render() {
-        let visible = 0;
-        for (let layer of this.props.layers) {
-            if (layer.klass === ESTATES) {
-                for (let feature of layer.features.features) {
-                    if (feature.visible) {
-                        visible += 1;
-                    }
-                }
-            } else {
-                if (layer.visible) {
-                    visible += 1;
-                }
-            }
-        }
-        console.log('render map',visible);
         this.key = 1;
         let layers = [];
 

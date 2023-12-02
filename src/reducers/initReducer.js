@@ -1,35 +1,24 @@
-//import {getMapZoom} from '../components/MyMap';
-import L from 'leaflet';
-
-import {
-    BUTTONS, ESTATES, BATHYMETRIES,
-    GET_LEAFS_OK, GET_LEAFS_FAIL,
-    GET_POPUP_OK, GET_POPUP_FAIL,
-    GET_LAYERS_OK, GET_LAYERS_FAIL,
-    GET_OIKEUDET_OK, GET_OIKEUDET_FAIL,
-    GET_BACKGROUND_OK, GET_BACKGROUND_FAIL,
-    GET_FLAGS_OK, GET_FLAGS_FAIL,
-    GET_ESTATES_OK, GET_ESTATES_FAIL,
-    GET_ESTATE_GEOM_OK, GET_ESTATE_GEOM_FAIL,
-    GET_BATHYMETRY_OK, GET_BATHYMETRY_FAIL,
-    SELECT_BACKGROUND,
-    SHOW_LAYER, SHOW_LAYERS, HIDE_LAYER, HIDE_LAYERS,
-    SHOW_LEAF, HIDE_LEAF,
-    SHOW_FEATURE, HIDE_FEATURE,
-    REFRESH,
-    SELECT_FEATURE,
-    UNSELECT_FEATURE,
-    SELECT_LAKE,
-    UNSELECT_LAKE,
-    SET_ACTIVE,
-    SET_UNACTIVE,
-    SET_FOCUSED,
-    ENABLE_HIDING,
-    FIT_BOUNDS_FINALLY,
-} from '../actions/initAction';
+import { BUTTONS, ESTATES, BATHYMETRIES, LAKES,
+         GET_LEAFS_OK, GET_LEAFS_FAIL,
+         GET_POPUP_OK, GET_POPUP_FAIL,
+         GET_LAYERS_OK, GET_LAYERS_FAIL,
+         GET_OIKEUDET_OK, GET_OIKEUDET_FAIL,
+         GET_BACKGROUND_OK, GET_BACKGROUND_FAIL,
+         GET_FLAGS_OK, GET_FLAGS_FAIL,
+         GET_ESTATES_OK, GET_ESTATES_FAIL,
+         GET_FEATURE_GEOMETRY_OK, GET_FEATURE_GEOMETRY_FAIL,
+         SELECT_BACKGROUND,
+         SHOW_LAYER, SHOW_LAYERS, HIDE_LAYER, HIDE_LAYERS,
+         SHOW_LEAF, HIDE_LEAF,
+         SHOW_FEATURE, HIDE_FEATURE,
+         SELECT_FEATURE,
+         UNSELECT_FEATURE,
+         SET_ACTIVE,
+         SET_UNACTIVE,
+         SET_FOCUSED,
+         FIT_BOUNDS_FINALLY,
+       } from '../actions/initAction';
 import { fitBounds } from '../components/MyMap';
-
-export const LAKES = 'lakes';
 
 export const expandBounds = (bounds, withBounds) => {
     let b = withBounds;
@@ -55,7 +44,6 @@ export const expandBounds = (bounds, withBounds) => {
 export const getBounds = (coordinates, bounds) => {
     let set_minmax_from = (x, y) => {
         if (Array.isArray(x)) {
-            //console.log('error');
             x = 1/0;
             return;
         }
@@ -73,7 +61,6 @@ export const getBounds = (coordinates, bounds) => {
             bounds[1][1] = y > bounds[1][1] ? y : bounds[1][1];
         }
     };
-    //console.log(coordinates);
     if (Array.isArray(coordinates[0])) {
         for (let i = 0; i < coordinates.length; i++) {
             let c2 = coordinates[i];
@@ -124,20 +111,16 @@ export const setBounds = (layers) => {
             continue;
         }
         if (is_point && layer.visible && layer.features) {
-            //console.log(layer);
             for (let i = 0; i < layer.features.features.length; i++) {
                 let feature = layer.features.features[i];
                 bounds = getBounds(feature.geometry.coordinates, bounds);
             }
         } else if (is_poly && layer.visible && layer.features) {
-            //console.log(layer);
             let feature = layer.features;
             bounds = getBounds(feature.coordinates);
         }
-        //console.log('setting bounds',bounds,layer.name,layer.table);
     }
     if (bounds) {
-        //console.log('fit bounds',bounds);
         fitBounds(bounds);
     }
 };
@@ -159,28 +142,8 @@ const initialState = {
 
 const initiallyVisible = {};
 
-function makeMarker(feature, latlng) {
-    let props = feature.properties;
-    let myIcon;
-    if (props.label) {
-        myIcon = L.divIcon({
-            className: 'my-div-icon',
-            html: props[props.label]
-        });
-    } else {
-        myIcon = L.icon({
-            iconUrl: process.env.PUBLIC_URL + '/media/' + props.legend,
-            iconSize: [props.graphic_width, props.graphic_height]
-        });
-    }
-    return L.marker(latlng, {
-        icon: myIcon,
-        autoPan: true
-    });
-}
-
 const initReducer = (state=initialState, action) => {
-    console.log(action);
+    //console.log(action);
     let leafs;
     let bounds;
     switch (action.type) {
@@ -222,7 +185,6 @@ const initReducer = (state=initialState, action) => {
             if (layer.klass === LAKES) {
                 // add bathymetries as a layer whose features can be individually visible/hidden
                 // they are initially deferred (have no geometry) and not visible
-                console.log('lakes', layer);
                 let from_lakes = [];
                 for (let lake of layer.features.features) {
                     if (lake.properties.syvyyskartta) {
@@ -247,7 +209,6 @@ const initReducer = (state=initialState, action) => {
                     });
                 }
             }
-            layer.style = makeMarker;
             layers.push(layer);
             let fs = layer.features;
             if (fs && fs.features && layer.geometry_type === 'Point') {
@@ -255,20 +216,15 @@ const initReducer = (state=initialState, action) => {
                 for (let j = 0; j < fs.length; j++) {
                     let coords = fs[j].geometry.coordinates;
                     let p = fs[j].properties;
-                    p.legend = layer.legend;
-                    p.label = layer.label;
-                    p.graphic_width = layer.graphic_width;
-                    p.graphic_height = layer.graphic_height;
-                    p.kohdetyyppi = layer.name;
                     features.push({
+                        layer: layer,
+                        geometry: fs[j].geometry,
                         properties: p,
-                        latlng: [coords[1], coords[0]]
                     });
                 }
             }
         }
         if (state.focused && action.fitBoundsFinallyPending === 0) {
-            //console.log('finally');
             setBounds(state.layers);
         }
         features.sort(function(a, b) {
@@ -304,7 +260,6 @@ const initReducer = (state=initialState, action) => {
         layers.push(layer);
         return {
             ...state,
-            estates: action.data[0].features.properties,
             layers: layers,
             error: ''
         };
@@ -313,25 +268,24 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case GET_ESTATE_GEOM_OK:
+    case GET_FEATURE_GEOMETRY_OK:
         layers = [];
         bounds = null;
         for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.klass === ESTATES) {
-                for (let estate of layer.features.features) {
-                    if (estate.properties.id === action.data.properties.id) {
-                        estate.geometry = action.data.geometry;
-                        estate.geometry.bounds = getBounds(estate.geometry.coordinates);
-                        estate.visible = true;
+            if (layer.klass === action.klass) {
+                for (let feature of layer.features.features) {
+                    if (feature.properties.id === action.data.properties.id) {
+                        feature.geometry = action.data.geometry;
+                        feature.geometry.bounds = getBounds(feature.geometry.coordinates);
+                        feature.visible = true;
                     }
-                    if (estate.geometry && estate.geometry.bounds && estate.visible) {
-                        bounds = expandBounds(bounds, estate.geometry.bounds);
+                    if (feature.geometry && feature.geometry.bounds && feature.visible) {
+                        bounds = expandBounds(bounds, feature.geometry.bounds);
                     }
                 }
             }
         }
-        console.log(bounds, state.focused, action.fitBoundsFinallyPending);
         if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
             fitBounds(bounds);
         }
@@ -340,34 +294,7 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case GET_BATHYMETRY_OK:
-        layers = [];
-        bounds = null;
-        for (let layer of state.layers) {
-            layers.push(layer);
-            if (layer.klass === BATHYMETRIES) {
-                for (let bathymetry of layer.features.features) {
-                    if (bathymetry.properties.id === action.data.properties.id) {
-                        bathymetry.geometry = action.data.geometry;
-                        bathymetry.geometry.bounds = getBounds(bathymetry.geometry.coordinates);
-                        bathymetry.visible = true;
-                    }
-                    if (bathymetry.geometry &&  bathymetry.geometry.bounds &&  bathymetry.visible) {
-                        bounds = expandBounds(bounds,  bathymetry.geometry.bounds);
-                    }
-                }
-            }
-        }
-        console.log(bounds, state.focused, action.fitBoundsFinallyPending);
-        if (bounds && state.focused && action.fitBoundsFinallyPending == 0) {
-            fitBounds(bounds);
-        }
-        return {
-            ...state,
-            layers: layers,
-            error: ''
-        };
-    case GET_BATHYMETRY_FAIL:
+    case GET_FEATURE_GEOMETRY_FAIL:
         return {
             ...state,
             error: action.error
@@ -439,11 +366,6 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case GET_FLAGS_FAIL:
-        return {
-            ...state,
-            error: action.error
-        };
-    case GET_ESTATE_GEOM_FAIL:
         return {
             ...state,
             error: action.error
@@ -595,20 +517,29 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case REFRESH:
+    case SELECT_FEATURE:
         layers = [];
+        bounds = null;
         for (let layer of state.layers) {
             layers.push(layer);
+            if (layer.id === action.feature.layer.id) {
+                if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
+                    for (let feature of layer.features.features) {
+                        feature.visible = true;
+                        bounds = expandBounds(bounds, feature.geometry.bounds);
+                    }
+                } else {
+                    layer.visible = true;
+                    let g = action.feature.geometry.coordinates;
+                    bounds = expandBounds(bounds, [g, g]);
+                }
+            }
         }
+        fitBounds(bounds);
         return {
             ...state,
+            //selected_feature: state.features[action.index],
             layers: layers,
-            error: ''
-        };
-    case SELECT_FEATURE:
-        return {
-            ...state,
-            selected_feature: state.features[action.index],
             error: ''
         };
     case UNSELECT_FEATURE:
@@ -647,20 +578,6 @@ const initReducer = (state=initialState, action) => {
         return {
             ...state,
             focused: action.focused,
-            error: ''
-        };
-    case ENABLE_HIDING:
-        layers = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
-            if (layer.klass === "buttons" && layer.legend === 'HideButton') {
-                layer.visible = true;
-            }
-            layers.push(layer);
-        }
-        return {
-            ...state,
-            layers: layers,
             error: ''
         };
     case FIT_BOUNDS_FINALLY:

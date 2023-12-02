@@ -2,18 +2,14 @@ import React from 'react';
 import { Embed, Button, Modal, Container, Header } from 'semantic-ui-react';
 
 const MyModal = (props) => {
-    //console.log('video props', props);
     const [open, setOpen] = React.useState(false);
-
     let embed = '';
-    //console.log(props);
     if (props.video !== '') {
         embed = <Embed
                   id={props.video}
                   source='youtube'
                 />;
     }
-
     return (<Modal
               onClose={() => setOpen(false)}
               onOpen={() => setOpen(true)}

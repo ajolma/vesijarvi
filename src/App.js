@@ -6,8 +6,8 @@ import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
 //export const server = 'https://biwatech.com/vj2';
-export const server = 'http://localhost:5000/vj2-test';
-//export const server = 'https://biwatech.com/vj2-test';
+//export const server = 'http://localhost:5000/vj2-test';
+export const server = 'https://biwatech.com/vj2-test';
 
 class App extends Component {
 

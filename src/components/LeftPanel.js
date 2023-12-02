@@ -1,24 +1,22 @@
 import React, { Component } from 'react';
 import { renderToString } from 'react-dom/server';
-import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divider, Item, Checkbox } from 'semantic-ui-react';
+import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divider, Item, Checkbox
+       } from 'semantic-ui-react';
 import { connect } from 'react-redux';
-import {
-    BUTTONS, BG,
-    CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKES, CATCHMENT, ESTATES, BATHYMETRIES,
-    ACTIONS, RIGHTS, FUNDERS, FEEDBACK,
-    hideLayer, hideLayers, showLayer, showLayers, hideLeaf, showLeaf,
-    selectFeature,
-    selectLake, unselectLake,
-    selectBackground,
-    getEstateGeom, getBathymetry, sendFeedback, setActive, setUnActive, setFocused, enableHiding,
-    showFeature, hideFeature, refresh,
-    fitBoundsFinally, refreshFinally
-}
-from '../actions/initAction';
+import { BUTTONS,
+         CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKES, CATCHMENT, ESTATES, BATHYMETRIES,
+         ACTIONS, RIGHTS, FUNDERS, FEEDBACK,
+         hideLayer, hideLayers, showLayer, showLayers, hideLeaf, showLeaf,
+         selectFeature,
+         selectBackground,
+         getFeatureGeometry, sendFeedback, setActive, setUnActive, setFocused,
+         showFeature, hideFeature,
+         fitBoundsFinally
+       } from '../actions/initAction';
 import { setBounds } from '../reducers/initReducer';
 import L from 'leaflet';
 import { mapsPlaceHolder } from '../index.js';
-import { make_popup_contents, flyTo, setView, fitBounds } from './MyMap';
+import { make_popup_contents, setView, fitBounds } from './MyMap';
 import MyModal from './Video';
 
 import './LeftPanel.css';
@@ -36,7 +34,7 @@ class LeftPanel extends Component {
         };
     }
 
-    ToggleSize = (e) => {
+    toggleSize = (e) => {
         this.setState({
             size: this.state.size === 'min' ? 'max' : 'min'
         });
@@ -113,25 +111,17 @@ class LeftPanel extends Component {
         } else {
             for (let layer of this.props.layers) {
                 this.props.dispatch(fitBoundsFinally());
-                if (klass === ESTATES && layer.klass === klass) {
+                let is_features = klass === ESTATES || klass === BATHYMETRIES;
+                if (is_features && layer.klass === klass) {
                     for (let feature of layer.features.features) {
                         if (!feature.geometry) {
-                            this.props.dispatch(getEstateGeom(feature));
-                        }
-                    }
-                }
-                if (klass === BATHYMETRIES && layer.klass === klass) {
-                    for (let feature of layer.features.features) {
-                        if (!feature.geometry) {
-                            this.props.dispatch(getBathymetry(feature));
+                            this.props.dispatch(getFeatureGeometry(feature, klass));
                         }
                     }
                 }
             }
             this.props.dispatch(showLeaf(klass));
         }
-        //this.props.dispatch(refreshFinally());
-        this.props.dispatch(refresh());
     }
 
     onLayerClick = (e) => {
@@ -141,7 +131,6 @@ class LeftPanel extends Component {
                 break;
             }
         }
-        console.log(e.target.id, layer);
         if (!layer) {
         } else if (layer.visible) {
             this.props.dispatch(hideLayer(layer));
@@ -149,42 +138,18 @@ class LeftPanel extends Component {
             this.props.dispatch(showLayer(layer));
         }
         if (this.props.focused) {
-            //console.log('set bounds from click on layer');
             setBounds(this.props.layers);
         }
     }
 
-    onClickOnEstate = (e) => {
+    onClickOnFeature = (e) => {
+        let klass = e.target.getAttribute('klass');
         let index = parseInt(e.target.id, 10);
         for (let layer of this.props.layers) {
-            if (layer.klass === ESTATES) {
+            if (layer.klass === klass) {
                 let feature = layer.features.features[index];
-                console.log('click on estate',feature);
                 if (!feature.geometry) {
-                    this.props.dispatch(getEstateGeom(feature));
-                }
-                if (feature.visible) {
-                    this.props.dispatch(hideFeature(layer.klass, feature));
-                } else {
-                    this.props.dispatch(showFeature(layer.klass, feature));
-                    console.log(feature);
-                    if (this.props.focused && feature.geometry && feature.geometry.bounds) {
-                        fitBounds(feature.geometry.bounds);
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    onClickOnBathymetry = (e) => {
-        let index = parseInt(e.target.id, 10);
-        for (let layer of this.props.layers) {
-            if (layer.klass === BATHYMETRIES) {
-                let feature = layer.features.features[index];
-                console.log('click on bathy',feature);
-                if (!feature.geometry) {
-                    this.props.dispatch(getBathymetry(feature));
+                    this.props.dispatch(getFeatureGeometry(feature, klass));
                 }
                 if (feature.visible) {
                     this.props.dispatch(hideFeature(layer.klass, feature));
@@ -205,10 +170,12 @@ class LeftPanel extends Component {
         if (this.places.hasOwnProperty(e.target.value)) {
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
-            //console.log('on change of place', feature);
+            this.props.dispatch(selectFeature(feature));
+            /*
             let latlng = feature.latlng;
             let zoom = 13;
             setView(latlng, zoom);
+            
             let popup = make_popup_contents(this.props.popup, feature);
             let content = renderToString(popup);
             L.popup()
@@ -217,6 +184,7 @@ class LeftPanel extends Component {
                 .openOn(mapsPlaceHolder[0]);
             this.props.dispatch(selectFeature(index));
             e.target.value = '';
+            */
         }
     }
 
@@ -285,12 +253,8 @@ class LeftPanel extends Component {
     key = 0;
 
     add_layers = (leafs) => {
-        //console.log('layers',this.props.layers);
-        // add layers to the leafs
-        let klasses = [];
         for (let layer of this.props.layers) {
             let leaf = leafs[layer.klass];
-            //console.log('layer',layer);
             let legend = layer.visible ? layer.legend : layer.legend_hidden;
             let h = layer.graphic_height;
             let w = layer.graphic_width;
@@ -376,7 +340,11 @@ class LeftPanel extends Component {
                     let estate = estates[i];
                     let img = this.layer_legend(estate.visible, estate.id);
                     leafs[ESTATES].layers.push(
-                        <div key={this.key} onClick={this.onClickOnEstate} id={i} style={{cursor: 'pointer'}}>
+                        <div key={this.key}
+                             onClick={this.onClickOnFeature}
+                             klass={ESTATES}
+                             id={i}
+                             style={{cursor: 'pointer'}}>
                           {img} {estate.properties.nimi}
                         </div>
                     );
@@ -390,14 +358,17 @@ class LeftPanel extends Component {
     add_bathymetries = (leafs) => {
         for (let i = 0; i < this.props.layers.length; i++) {
             if (this.props.layers[i].klass === BATHYMETRIES) {
-                //console.log('b',this.props.layers[i]);
                 let layer = this.props.layers[i];
                 let estates = layer.features.features;
                 for (let i = 0; i < estates.length; i++) {
                     let estate = estates[i];
                     let img = this.layer_legend(estate.visible, estate.id);
                     leafs[BATHYMETRIES].layers.push(
-                        <div key={this.key} onClick={this.onClickOnBathymetry} id={i} style={{cursor: 'pointer'}}>
+                        <div key={this.key}
+                             onClick={this.onClickOnFeature}
+                             klass={BATHYMETRIES}
+                             id={i}
+                             style={{cursor: 'pointer'}}>
                           {img} {estate.properties.nimi}
                         </div>
                     );
@@ -411,7 +382,6 @@ class LeftPanel extends Component {
     add_show_hide = (leafs) => {
         for (let [klass, leaf] of Object.entries(leafs)) {
             if (leaf.add_show_hide) {
-                //console.log('add show hide',klass,leaf);
                 let imgUrl, name, id;
                 if (leaf.layers_visible) {
                     imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
@@ -471,7 +441,6 @@ class LeftPanel extends Component {
                 let parts = layer.kuvaus.split(";");
                 let content = [];
                 for (let j = 0; j < parts.length; j++) {
-                    //console.log(parts[j]);
                     if (parts[j].substr(0, 4) === 'http') {
                         content.push(
                             <p key={this.key} className="left-para">
@@ -522,7 +491,17 @@ class LeftPanel extends Component {
             }
             let lisatieto = '';
             if (o.lisatieto) {
-                lisatieto = <span>{o.lisatieto}</span>;
+
+                let s = String(o.lisatieto);
+                if (s.includes('href')) {
+                    let m = /<a (.*)?<\/a>/.exec(s);
+                    let href = /href="(.*)?"/.exec(m[1]);
+                    let t = />(.*)?</.exec(m[0]);
+                    let x = s.replace(m[0], '|').split('|');
+                    s = <div>{x[0]}<a href={href[1]} target='_blank' rel='noreferrer'>{t[1]}</a>{x[1]}</div>;
+                }
+                
+                lisatieto = <span>{s}</span>;
             }
             oikeudet.push(
                 <List.Item key={aineisto}>
@@ -591,7 +570,7 @@ class LeftPanel extends Component {
         if (this.state.size === 'min') {
             return (
                 <div className="LeftPanelMinimized" align="left">
-                  <Icon name='angle double right' onClick={this.ToggleSize} />
+                  <Icon name='angle double right' onClick={this.toggleSize} />
                 </div>
             );
         }
@@ -690,7 +669,7 @@ class LeftPanel extends Component {
                        icon='search'
                        placeholder='Hae...'
                        onChange={this.onChangeOfPlace} />
-                &nbsp;&nbsp;<Icon name='angle double left' onClick={this.ToggleSize} />
+                &nbsp;&nbsp;<Icon name='angle double left' onClick={this.toggleSize} />
                 <datalist id='places'>{datalist}</datalist>
               </Menu.Item>
 
