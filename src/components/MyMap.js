@@ -270,70 +270,43 @@ class MyMap extends Component {
         }
     }
 
-    add_river = (layers, layer) => {
-        //console.log('river', layer);
-        let c = layer.features.coordinates;
-        let p = layer.features.properties;
-        for (let k = 0; k < c.length; k++) {
-            let ps = c[k];
-            let polyline = [];
-            for (let j = 0; j < ps.length; j++) {
-                polyline.push(ps[j]);
-            }
-            layers.push(
-                <Polyline key={this.key}
-                          stroke="true"
-                          color={layer.stroke_color}
-                          weight={layer.stroke_width}
-                          opacity={layer.opacity}
-                          positions={polyline}>
-                  <Tooltip>{p[k].nimi}</Tooltip>
-                </Polyline>
-            );
-            this.key++;
-        }
+    add_river = (layers, layer, feature) => {
+        //console.log('feature', feature);
+        let p = feature.properties;
+        layers.push(
+            <Polyline key={this.key}
+                      stroke="true"
+                      color={layer.stroke_color}
+                      weight={layer.stroke_width}
+                      opacity={layer.opacity}
+                      positions={feature.geometry.coordinates}>
+              <Tooltip>{p.nimi}</Tooltip>
+            </Polyline>
+        );
+        this.key++;
     }
 
-    add_lake = (layers, layer) => {
-        let c = layer.features.coordinates;
-        let p = layer.features.properties;
-        for (let k = 0; k < c.length; k++) {
-            let ps = c[k];
-            let polygon = [];
-            for (let j = 0; j < ps.length; j++) {
-                polygon.push(ps[j]);
-            }
-            let tooltip = '';
-            if (p[k].nimi) {
-                tooltip = <Tooltip>{p[k].nimi}</Tooltip>;
-            }
-            let fill_color = layer.fill_color;
-            if (p[k].fill_color) {
-                fill_color = p[k].fill_color;
-            }
-            let popup = null;
-            let onClick = null;
-            let feature = {
-                properties: p[k],
-            };
-            if (layer.popup) {
-                popup = this.make_popup(feature);
-            }
-            let overlay = <Polygon key={this.key}
-                                   fillColor={fill_color}
-                                   fillOpacity={layer.fill_opacity}
-                                   stroke="true"
-                                   color={layer.stroke_color}
-                                   weight={layer.stroke_width}
-                                   opacity={layer.opacity}
-                                   onClick={onClick}
-                                   positions={polygon}>
-                            {tooltip}
-                            {popup}
-                          </Polygon>;
-            layers.push(overlay);
-            this.key++;
-        }
+    add_lake = (layers, layer, feature) => {
+        console.log('layer', layer);
+        console.log('feature', feature);
+        let p = feature.properties;
+        let fill_opacity = layer.fill_opacity || 0;
+        let fill_color = p.fill_color || layer.fill_color;
+        let tooltip = p.nimi || p.name || p.kohdetyyppi;
+        let popup = layer.popup ? this.make_popup(feature) : null;
+        let overlay = <Polygon key={this.key}
+                               fillColor={fill_color}
+                               fillOpacity={fill_opacity}
+                               stroke="true"
+                               color={layer.stroke_color}
+                               weight={layer.stroke_width}
+                               opacity={layer.opacity}
+                               positions={feature.geometry.coordinates}>
+                        <Tooltip>{tooltip}</Tooltip>
+                        {popup}
+                      </Polygon>;
+        layers.push(overlay);
+        this.key++;
     }
 
     add_rivers_and_lakes = (layers) => {
@@ -342,15 +315,15 @@ class MyMap extends Component {
                 continue;
             }
             let from_net = layer.table.substr(0, 4) === 'http';
-            let features = layer.features;
-            if (layer.visible && !from_net && features && features.coordinates) {
-                if (layer.geometry_type === 'Polyline') {
-                    this.add_river(layers, layer);
-                } else if (layer.geometry_type === 'Polygon') {
-                    this.add_lake(layers, layer);
+            if (!layer.visible || from_net) {
+                continue;
+            }
+            for (let feature of layer.features.features) {
+                if (feature.geometry.type === 'Polyline') {
+                    this.add_river(layers, layer, feature);
+                } else if (feature.geometry.type === 'Polygon') {
+                    this.add_lake(layers, layer, feature);
                 }
-            } else {
-                this.key += 200;
             }
         }
     }

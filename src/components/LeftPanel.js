@@ -599,6 +599,7 @@ class LeftPanel extends Component {
         let accs = [];
         for (let leaf of this.props.leafs) {
             if (leaf.klass === BUTTONS) {
+                //console.log('buttons',leaf);
                 this.add_buttons(items, leafs[leaf.klass]);
                 continue;
             }

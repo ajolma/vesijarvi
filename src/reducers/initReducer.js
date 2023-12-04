@@ -110,6 +110,7 @@ export const setBounds = (layers) => {
         if (layer.table && layer.table.startsWith('https')) {
             continue;
         }
+        is_point = true;
         if (is_point && layer.visible && layer.features) {
             for (let i = 0; i < layer.features.features.length; i++) {
                 let feature = layer.features.features[i];
@@ -210,16 +211,13 @@ const initReducer = (state=initialState, action) => {
                 }
             }
             layers.push(layer);
-            let fs = layer.features;
-            if (fs && fs.features && layer.geometry_type === 'Point') {
-                fs = fs.features;
-                for (let j = 0; j < fs.length; j++) {
-                    let coords = fs[j].geometry.coordinates;
-                    let p = fs[j].properties;
+            if (layer.features) {
+                for (let feature of layer.features.features) {
+                    let coords = feature.geometry.coordinates;
                     features.push({
                         layer: layer,
-                        geometry: fs[j].geometry,
-                        properties: p,
+                        geometry: feature.geometry,
+                        properties: feature.properties,
                     });
                 }
             }
@@ -246,6 +244,10 @@ const initReducer = (state=initialState, action) => {
             error: action.error
         };
     case GET_ESTATES_OK:
+        features = [];
+        for (let i = 0; i < state.features.length; i++) {
+            features.push(state.features[i]);
+        }
         layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
@@ -258,9 +260,24 @@ const initReducer = (state=initialState, action) => {
             estate.visible = false;
         }
         layers.push(layer);
+        for (let feature of layer.features.features) {
+            features.push({
+                layer: layer,
+                geometry: feature.geometry,
+                properties: feature.properties,
+            });
+        }
+        features.sort(function(a, b) {
+            let n = a.properties.nimi;
+            if (typeof n === 'undefined') {
+                n = '';
+            }
+            return n.localeCompare(b.properties.nimi, 'fi');
+        });
         return {
             ...state,
             layers: layers,
+            //features: features, estates have no initial geometry
             error: ''
         };
     case GET_ESTATES_FAIL:
