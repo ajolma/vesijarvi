@@ -136,9 +136,9 @@ class LeftPanel extends Component {
             this.props.dispatch(hideLayer(layer));
         } else {
             this.props.dispatch(showLayer(layer));
-        }
-        if (this.props.focused) {
-            setBounds(this.props.layers);
+            if (this.props.focused) {
+                setBounds(this.props.layers);
+            }
         }
     }
 

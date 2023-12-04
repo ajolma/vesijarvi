@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import L from 'leaflet';
 import React, { Component, useRef, useMemo } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -51,7 +52,7 @@ export const make_popup_contents = (popup, feature) => {
                     let poster = name.match(/(\w+).mp4$/);
                     poster = process.env.PUBLIC_URL + '/media/' + poster[1] + '.jpeg';
                     images.push(
-                        <div key={2000+i}>
+                        <div key={uuidv4()}>
                           <video width='270' height='200' controls={true} preload='none' poster={poster}>
                             <source src={src} type='video/mp4'></source>
                           </video>
@@ -61,11 +62,11 @@ export const make_popup_contents = (popup, feature) => {
                 } else {
                     if (scale) {
                       images.push(
-                          <img src={src} alt={src} width={scale} height={scale} key={2000+i}></img>
+                          <img src={src} alt={src} width={scale} height={scale} key={uuidv4()}></img>
                       );
                     } else {
                         images.push(
-                            <img src={src} alt={src} key={2000+i}></img>
+                            <img src={src} alt={src} key={uuidv4()}></img>
                         );
                     }
                 }
@@ -95,7 +96,7 @@ export const make_popup_contents = (popup, feature) => {
             value = <div>{x[0]}<a href={href[1]} target='_blank' rel='noreferrer'>{t[1]}</a>{x[1]}</div>;
         }
         items.push(
-            <Table.Row key={1000+i}>
+            <Table.Row key={uuidv4()}>
               <Table.Cell>{otsikko}</Table.Cell>
               <Table.Cell>{value}</Table.Cell>
             </Table.Row>
@@ -180,16 +181,13 @@ class MyMap extends Component {
         return <Popup isDraggable={true}>{contents}</Popup>;
     }
 
-    key = 1;
-
     set_bg = (layers) => {
         for (let bg of this.props.backgrounds) {
             if (bg.visible) {
                 layers.push(
-                    <TileLayer key={this.key}
+                    <TileLayer key={1}
                                attribution={bg.attribution}
                                url={bg.url}/>);
-                this.key++;
                 break;
             }
         }
@@ -200,14 +198,13 @@ class MyMap extends Component {
             if (layer.visible && layer.table && layer.table.startsWith('https')) {
                 layers.push(
                     <TileLayer
-                        key={this.key}
+                        key={uuidv4()}
                         attribution=''
                         tms='true'
                         opacity={layer.opacity}
                         url={layer.table}
                     />);
             }
-            this.key++;
         }
     }
 
@@ -227,7 +224,7 @@ class MyMap extends Component {
                             multiPolygon.push(polygon);
                         }
                         layers.push(<HilitePolygon
-                                      key={this.key}
+                                      key={uuidv4()}
                                       polygon={multiPolygon}
                                       stroke={true}
                                       color={layer.stroke_color}
@@ -236,7 +233,6 @@ class MyMap extends Component {
                                       fillOpacity={layer.fill_opacity}
                                       tooltip={feature.properties.nimi}
                                     />);
-                        this.key++;
                     }
                 }
                 break;
@@ -253,7 +249,7 @@ class MyMap extends Component {
                         let stroke = false;
                         for (let coords of bathymetry.geometry.coordinates) {
                             layers.push(
-                                <Polygon key={this.key}
+                                <Polygon key={uuidv4()}
                                          fillColor="blue"
                                          fillOpacity={fill_opacity}
                                          stroke={stroke}
@@ -261,7 +257,6 @@ class MyMap extends Component {
                                          positions={coords}>
                                 </Polygon>
                             );
-                            this.key++;
                         }
                     }
                 }
@@ -271,42 +266,36 @@ class MyMap extends Component {
     }
 
     add_river = (layers, layer, feature) => {
-        //console.log('feature', feature);
         let p = feature.properties;
-        layers.push(
-            <Polyline key={this.key}
-                      stroke="true"
-                      color={layer.stroke_color}
-                      weight={layer.stroke_width}
-                      opacity={layer.opacity}
-                      positions={feature.geometry.coordinates}>
-              <Tooltip>{p.nimi}</Tooltip>
-            </Polyline>
-        );
-        this.key++;
+        let overlay = <Polyline key={uuidv4()}
+                                stroke="true"
+                                color={layer.stroke_color}
+                                weight={layer.stroke_width}
+                                opacity={layer.opacity}
+                                positions={feature.geometry.coordinates}>
+                        <Tooltip>{p.nimi}</Tooltip>
+                      </Polyline>;
+        layers.push(overlay);
     }
 
     add_lake = (layers, layer, feature) => {
-        console.log('layer', layer);
-        console.log('feature', feature);
         let p = feature.properties;
-        let fill_opacity = layer.fill_opacity || 0;
         let fill_color = p.fill_color || layer.fill_color;
+        let fill_opacity = layer.fill_opacity || 0.0;
         let tooltip = p.nimi || p.name || p.kohdetyyppi;
         let popup = layer.popup ? this.make_popup(feature) : null;
-        let overlay = <Polygon key={this.key}
-                               fillColor={fill_color}
-                               fillOpacity={fill_opacity}
+        let overlay = <Polygon key={uuidv4()}
                                stroke="true"
                                color={layer.stroke_color}
                                weight={layer.stroke_width}
                                opacity={layer.opacity}
+                               fillColor={fill_color}
+                               fillOpacity={layer.fill_opacity}
                                positions={feature.geometry.coordinates}>
                         <Tooltip>{tooltip}</Tooltip>
                         {popup}
                       </Polygon>;
         layers.push(overlay);
-        this.key++;
     }
 
     add_rivers_and_lakes = (layers) => {
@@ -349,24 +338,21 @@ class MyMap extends Component {
                             className: 'my-div-icon',
                             html: html,
                         });
-                        console.log('paikannimi',feature);
                     }
                     let popup = make_popup_contents(this.props.popup, feature);
                     layers.push(
-                        <Marker key={this.key}
+                        <Marker key={uuidv4()}
                                 position={feature.geometry.coordinates}
                                 icon={icon}
                         >
                           <Popup>{popup}</Popup>
                         </Marker>);
-                    this.key++;
                 }
             }
         }
     }
 
     render() {
-        this.key = 1;
         let layers = [];
 
         this.set_bg(layers);
