@@ -1,10 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import L from 'leaflet';
 import React, { Component, useRef, useMemo } from 'react';
-import { renderToString } from 'react-dom/server';
 import { connect } from 'react-redux';
 import { Header, Table } from 'semantic-ui-react';
-import { MapContainer, useMap, TileLayer, GeoJSON, Popup,
+import { MapContainer, useMap, TileLayer, Popup,
          Polygon, Polyline, Tooltip, ScaleControl, Marker
        } from 'react-leaflet';
 import './MyMap.css';
@@ -26,7 +25,6 @@ export const make_popup_contents = (popup, feature) => {
         let otsikko = popup[i].otsikko;
         let sarake = popup[i].sarake;
         let value = feature.properties[sarake];
-        let typeOfValue = typeof value;
         if (!value) {
             continue;
         } else {
@@ -290,7 +288,7 @@ class MyMap extends Component {
                                weight={layer.stroke_width}
                                opacity={layer.opacity}
                                fillColor={fill_color}
-                               fillOpacity={layer.fill_opacity}
+                               fillOpacity={fill_opacity}
                                positions={feature.geometry.coordinates}>
                         <Tooltip>{tooltip}</Tooltip>
                         {popup}

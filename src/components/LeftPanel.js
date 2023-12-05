@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { renderToString } from 'react-dom/server';
 import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divider, Item, Checkbox
        } from 'semantic-ui-react';
 import { connect } from 'react-redux';
@@ -14,9 +13,7 @@ import { BUTTONS,
          fitBoundsFinally
        } from '../actions/initAction';
 import { setBounds } from '../reducers/initReducer';
-import L from 'leaflet';
-import { mapsPlaceHolder } from '../index.js';
-import { make_popup_contents, setView, fitBounds } from './MyMap';
+import { fitBounds } from './MyMap';
 import MyModal from './Video';
 
 import './LeftPanel.css';

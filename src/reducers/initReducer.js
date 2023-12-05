@@ -144,7 +144,7 @@ const initialState = {
 const initiallyVisible = {};
 
 const initReducer = (state=initialState, action) => {
-    //console.log(action);
+    console.log(action);
     let leafs;
     let bounds;
     switch (action.type) {
@@ -213,7 +213,6 @@ const initReducer = (state=initialState, action) => {
             layers.push(layer);
             if (layer.features) {
                 for (let feature of layer.features.features) {
-                    let coords = feature.geometry.coordinates;
                     features.push({
                         layer: layer,
                         geometry: feature.geometry,
