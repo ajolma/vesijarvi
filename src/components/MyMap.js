@@ -133,7 +133,9 @@ export function setView(latlng, zoom) {
 }
 
 export function fitBounds(bounds) {
-    map.fitBounds(bounds);
+    map.fitBounds(bounds, {
+        paddingBottomRight: [250, 0],
+    });
 }
 
 export function UseMap() {

@@ -5,9 +5,10 @@ import { fitBoundsFinally, getLeafs, getPopup } from './actions/initAction';
 import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
-//export const server = 'https://biwatech.com/vj2';
-//export const server = 'http://localhost:5000/vj2-test';
-export const server = 'https://biwatech.com/vj2-test';
+const dev = process.env.NODE_ENV === 'development';
+const host = 'biwatech.com';
+const path = 'vj2-test'; // vj2
+export const server = dev ? `http://localhost:5000/${path}` : `https://${host}/${path}`;
 
 class App extends Component {
 
