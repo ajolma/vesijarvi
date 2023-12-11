@@ -552,6 +552,7 @@ export const hideLayers = () => {
 export const showLeaf = (klass) => {
     return {
         type: SHOW_LEAF,
+        fitBoundsFinallyPending: fitBoundsFinallyPending,
         klass: klass,
     };
 }

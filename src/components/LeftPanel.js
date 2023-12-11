@@ -168,20 +168,6 @@ class LeftPanel extends Component {
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
             this.props.dispatch(selectFeature(feature));
-            /*
-            let latlng = feature.latlng;
-            let zoom = 13;
-            setView(latlng, zoom);
-            
-            let popup = make_popup_contents(this.props.popup, feature);
-            let content = renderToString(popup);
-            L.popup()
-                .setLatLng(latlng)
-                .setContent(content)
-                .openOn(mapsPlaceHolder[0]);
-            this.props.dispatch(selectFeature(index));
-            e.target.value = '';
-            */
         }
     }
 
@@ -596,7 +582,6 @@ class LeftPanel extends Component {
         let accs = [];
         for (let leaf of this.props.leafs) {
             if (leaf.klass === BUTTONS) {
-                //console.log('buttons',leaf);
                 this.add_buttons(items, leafs[leaf.klass]);
                 continue;
             }

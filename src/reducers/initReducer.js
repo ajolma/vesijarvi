@@ -144,7 +144,7 @@ const initialState = {
 const initiallyVisible = {};
 
 const initReducer = (state=initialState, action) => {
-    console.log(action);
+    //console.log(action);
     let leafs;
     let bounds;
     switch (action.type) {
@@ -507,6 +507,9 @@ const initReducer = (state=initialState, action) => {
             } else {
                 layer.visible = true;
             }
+        }
+        if (state.focused && action.fitBoundsFinallyPending === 0) {
+            setBounds(layers);
         }
         return {
             ...state,
