@@ -103,22 +103,28 @@ export const getBounds = (coordinates, bounds) => {
 
 export const setBounds = (layers) => {
     let bounds = null;
-    for (let i = 0; i < layers.length; i++) {
-        let layer = layers[i];
-        let is_point = layer.geometry_type === 'Point';
-        let is_poly = layer.geometry_type === 'Polygon' || layer.geometry_type === 'Polyline';
+    for (let layer of layers) {
         if (layer.table && layer.table.startsWith('https')) {
             continue;
         }
-        is_point = true;
-        if (is_point && layer.visible && layer.features) {
-            for (let i = 0; i < layer.features.features.length; i++) {
-                let feature = layer.features.features[i];
-                bounds = getBounds(feature.geometry.coordinates, bounds);
+        if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
+            for (let feature of layer.features.features) {
+                if (feature.visible && feature.geometry && feature.geometry.bounds) {
+                    bounds = expandBounds(bounds, feature.geometry.bounds);
+                }
             }
-        } else if (is_poly && layer.visible && layer.features) {
-            let feature = layer.features;
-            bounds = getBounds(feature.coordinates);
+        } else {
+            let is_point = layer.geometry_type === 'Point';
+            let is_poly = layer.geometry_type === 'Polygon' || layer.geometry_type === 'Polyline';
+            if (is_point && layer.visible && layer.features) {
+                for (let i = 0; i < layer.features.features.length; i++) {
+                    let feature = layer.features.features[i];
+                    bounds = getBounds(feature.geometry.coordinates, bounds);
+                }
+            } else if (is_poly && layer.visible && layer.features) {
+                let feature = layer.features;
+                bounds = getBounds(feature.coordinates);
+            }
         }
     }
     if (bounds) {
@@ -286,7 +292,6 @@ const initReducer = (state=initialState, action) => {
         };
     case GET_FEATURE_GEOMETRY_OK:
         layers = [];
-        bounds = null;
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass === action.klass) {
@@ -296,14 +301,11 @@ const initReducer = (state=initialState, action) => {
                         feature.geometry.bounds = getBounds(feature.geometry.coordinates);
                         feature.visible = true;
                     }
-                    if (feature.geometry && feature.geometry.bounds && feature.visible) {
-                        bounds = expandBounds(bounds, feature.geometry.bounds);
-                    }
                 }
             }
         }
-        if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
-            fitBounds(bounds);
+        if (state.focused && action.fitBoundsFinallyPending === 0) {
+            setBounds(layers);
         }
         return {
             ...state,
@@ -388,16 +390,12 @@ const initReducer = (state=initialState, action) => {
         };
     case SHOW_FEATURE:
         layers = [];
-        bounds = null;
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass === action.klass) {
                 for (let feature of layer.features.features) {
                     if (feature.properties.id === action.feature.properties.id) {
                         feature.visible = true;
-                    }
-                    if (feature.visible && feature.geometry && feature.geometry.bounds) {
-                        bounds = expandBounds(bounds, feature.geometry.bounds);
                     }
                 }
             }
@@ -406,7 +404,7 @@ const initReducer = (state=initialState, action) => {
             }
         }
         if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
-            fitBounds(bounds);
+            setBounds(layers);
         }
         return {
             ...state,
