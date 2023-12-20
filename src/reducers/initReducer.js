@@ -101,7 +101,7 @@ export const getBounds = (coordinates, bounds) => {
     return bounds;
 };
 
-export const setBounds = (layers) => {
+export const setBounds = (layers, full) => {
     let bounds = null;
     for (let layer of layers) {
         if (layer.table && layer.table.startsWith('https')) {
@@ -114,28 +114,23 @@ export const setBounds = (layers) => {
                 }
             }
         } else {
-            let is_point = layer.geometry_type === 'Point';
-            let is_poly = layer.geometry_type === 'Polygon' || layer.geometry_type === 'Polyline';
-            if (is_point && layer.visible && layer.features) {
-                for (let i = 0; i < layer.features.features.length; i++) {
-                    let feature = layer.features.features[i];
-                    bounds = getBounds(feature.geometry.coordinates, bounds);
+            if (layer.visible && layer.features) {
+                for (let feature of layer.features.features) {
+                    let b = getBounds(feature.geometry.coordinates);
+                    bounds = expandBounds(bounds, b);
                 }
-            } else if (is_poly && layer.visible && layer.features) {
-                let feature = layer.features;
-                bounds = getBounds(feature.coordinates);
             }
         }
     }
     if (bounds) {
-        fitBounds(bounds);
+        fitBounds(bounds, full);
     }
 };
 
 const initialState = {
     latlng: [61.05, 25.55],
     zoom: 11,
-    leafs: [],
+    leafs: {},
     popup: [],
     layers: [],
     features: [],
@@ -149,6 +144,14 @@ const initialState = {
 
 const initiallyVisible = {};
 
+function toObject(arr, key) {
+    var rv = {};
+    for (let obj of arr) {
+        rv[obj[key]] = obj;
+    }
+    return rv;
+}
+
 const initReducer = (state=initialState, action) => {
     //console.log(action);
     let leafs;
@@ -157,7 +160,7 @@ const initReducer = (state=initialState, action) => {
     case GET_LEAFS_OK:
         return {
             ...state,
-            leafs: action.data,
+            leafs: toObject(action.data, 'klass'),
             error: ''
         };
     case GET_LEAFS_FAIL:
@@ -179,8 +182,7 @@ const initReducer = (state=initialState, action) => {
     case GET_LAYERS_OK:
         let layers = [];
         let features = [];
-        for (let i = 0; i < state.layers.length; i++) {
-            let layer = state.layers[i];
+        for (let layer of state.layers) {
             initiallyVisible[layer.name] = layer.visible;
             layers.push(layer);
         }
@@ -249,11 +251,11 @@ const initReducer = (state=initialState, action) => {
             error: action.error
         };
     case GET_ESTATES_OK:
+        layers = [];
         features = [];
         for (let i = 0; i < state.features.length; i++) {
             features.push(state.features[i]);
         }
-        layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
         }
@@ -403,7 +405,7 @@ const initReducer = (state=initialState, action) => {
                 layer.visible = true;
             }
         }
-        if (bounds && state.focused && action.fitBoundsFinallyPending === 0) {
+        if (state.focused && action.fitBoundsFinallyPending === 0) {
             setBounds(layers);
         }
         return {
@@ -423,6 +425,9 @@ const initReducer = (state=initialState, action) => {
                 }
             }
         }
+        if (state.focused) {
+            setBounds(layers);
+        }
         return {
             ...state,
             layers: layers,
@@ -438,6 +443,25 @@ const initReducer = (state=initialState, action) => {
             if (layer.klass === BUTTONS && layer.legend === 'HideButton') {
                 layer.visible = true;
             }
+        }
+        if (state.focused) {
+            setBounds(layers);
+        }
+        return {
+            ...state,
+            layers: layers,
+            error: ''
+        };
+    case HIDE_LAYER:
+        layers = [];
+        for (let layer of state.layers) {
+            layers.push(layer);
+            if (layer.id === action.layer.id) {
+                layer.visible = false;
+            }
+        }
+        if (state.focused) {
+            setBounds(layers);
         }
         return {
             ...state,
@@ -455,18 +479,8 @@ const initReducer = (state=initialState, action) => {
                 layer.visible = true;
             }
         }
-        return {
-            ...state,
-            layers: layers,
-            error: ''
-        };
-    case HIDE_LAYER:
-        layers = [];
-        for (let layer of state.layers) {
-            layers.push(layer);
-            if (layer.id === action.layer.id) {
-                layer.visible = false;
-            }
+        if (state.focused) {
+            setBounds(layers);
         }
         return {
             ...state,
@@ -529,6 +543,9 @@ const initReducer = (state=initialState, action) => {
                 layer.visible = false;
             }
         }
+        if (state.focused) {
+            setBounds(layers);
+        }
         return {
             ...state,
             layers: layers,
@@ -566,12 +583,12 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SET_ACTIVE:
-        leafs = [];
-        for (let leaf of state.leafs) {
-            if (leaf.klass === action.klass) {
+        leafs = {};
+        for (let [klass, leaf] of Object.entries(state.leafs)) {
+            if (klass === action.klass) {
                 leaf.active = 1;
             }
-            leafs.push(leaf);
+            leafs[klass] = leaf;
         }
         return {
             ...state,
@@ -579,12 +596,12 @@ const initReducer = (state=initialState, action) => {
             error: ''
         };
     case SET_UNACTIVE:
-        leafs = [];
-        for (let leaf of state.leafs) {
-            if (leaf.klass === action.klass) {
+        leafs = {};
+        for (let [klass, leaf] of Object.entries(state.leafs)) {
+            if (klass === action.klass) {
                 leaf.active = 0;
             }
-            leafs.push(leaf);
+            leafs[klass] = leaf;
         }
         return {
             ...state,

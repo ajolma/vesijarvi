@@ -32,9 +32,11 @@ class LeftPanel extends Component {
     }
 
     toggleSize = (e) => {
+        let is_min = this.state.size === 'min';
         this.setState({
-            size: this.state.size === 'min' ? 'max' : 'min'
+            size: is_min ? 'max' : 'min'
         });
+        setBounds(this.props.layers, !is_min);
     }
 
     onHideAll = (b, e) => {
@@ -67,13 +69,7 @@ class LeftPanel extends Component {
 
     handleClick = (e, titleProps) => {
         const {klass} = titleProps;
-        let a = 0;
-        for (let leaf of this.props.leafs) {
-            if (leaf.klass === klass) {
-                a = leaf.active;
-            }
-        }
-        if (a === 0) {
+        if (!this.props.leafs[klass].active) {
             this.props.dispatch(setActive(klass));
         } else {
             this.props.dispatch(setUnActive(klass));
@@ -150,10 +146,13 @@ class LeftPanel extends Component {
                 }
                 if (feature.visible) {
                     this.props.dispatch(hideFeature(layer.klass, feature));
+                    if (this.props.focused) {
+                        setBounds(this.props.layers);
+                    }
                 } else {
                     this.props.dispatch(showFeature(layer.klass, feature));
-                    if (this.props.focused && feature.geometry && feature.geometry.bounds) {
-                        fitBounds(feature.geometry.bounds);
+                    if (this.props.focused) {
+                        setBounds(this.props.layers);
                     }
                 }
                 break;
@@ -559,7 +558,7 @@ class LeftPanel extends Component {
         }
 
         let leafs = {};
-        for (let leaf of this.props.leafs) {
+        for (let [klass, leaf] of Object.entries(this.props.leafs)) {
             leafs[leaf.klass] = {
                 layers: [],
                 active: leaf.active > 0,
@@ -580,7 +579,7 @@ class LeftPanel extends Component {
 
         let items = [];
         let accs = [];
-        for (let leaf of this.props.leafs) {
+        for (let [klass, leaf] of Object.entries(this.props.leafs)) {
             if (leaf.klass === BUTTONS) {
                 this.add_buttons(items, leafs[leaf.klass]);
                 continue;
@@ -589,7 +588,7 @@ class LeftPanel extends Component {
             let color = active ? 'teal' : 'grey';
             accs.push(
                 <Accordion.Title active={active} klass={leaf.klass} onClick={this.handleClick} key={this.key}>
-                       <Icon name='dropdown' />
+                  <Icon name='dropdown' />
                   <Label color={color}>{leaf.title}</Label>
                 </Accordion.Title>
             );

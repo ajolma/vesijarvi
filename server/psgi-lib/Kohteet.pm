@@ -54,7 +54,6 @@ sub call {
         $klass = $1;
     }
     return $self->leafs($dbh) unless defined $klass;
-    return $self->bathymetry($dbh, $path) if $klass eq 'bathymetry';
     my $layer = 0;
     if ($path ne '') {
         if ($path =~ s/^\/(\d+)//) {
@@ -77,6 +76,7 @@ sub leafs {
     while (my $row = $sth->fetchrow_hashref) {
         my $leaf = $row->{id};
         delete $row->{id};
+        $row->{order} = $row->{nr};
         delete $row->{nr};
         if ($row->{layers}) {
             $row->{layers} = [];
@@ -146,28 +146,6 @@ sub bathymetries {
         }
     };
     return json200($response);
-}
-
-sub bathymetry {
-    my ($self, $dbh, $path) = @_;
-    if ($path =~ /\/syvyyskartta=(\w+)/) {
-        my $table = $1;
-        my $geom = geometry('geom');
-        my $sql = "SELECT $geom FROM syvyyskartat.\"$table\"";
-        my $sth = $dbh->prepare($sql) or return error(500, $dbh->errstr);
-        my $rv = $sth->execute or return error(500, $dbh->errstr);
-        my $coll = [];
-        my $count = 0;
-        while (my $r = $sth->fetchrow_hashref) {
-            my $g = decode_json $r->{geom};
-            $g = $g->{coordinates};
-            swap_xy($g);
-            push @$coll, $g;
-        }
-        return json200($coll);
-    } else {
-        return error(404);
-    }
 }
 
 sub layers {
