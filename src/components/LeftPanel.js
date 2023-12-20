@@ -3,7 +3,7 @@ import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divi
        } from 'semantic-ui-react';
 import { connect } from 'react-redux';
 import { BUTTONS,
-         CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKES, CATCHMENT, ESTATES, BATHYMETRIES,
+         CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, CATCHMENTS, LAKES, CATCHMENT, ESTATES, BATHYMETRIES,
          ACTIONS, RIGHTS, FUNDERS, FEEDBACK,
          hideLayer, hideLayers, showLayer, showLayers, hideLeaf, showLeaf,
          selectFeature,
@@ -163,10 +163,20 @@ class LeftPanel extends Component {
     places = {}
 
     onChangeOfPlace = (e) => {
-        if (this.places.hasOwnProperty(e.target.value)) {
+        if (e.target.value !== '' && this.places.hasOwnProperty(e.target.value)) {
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
-            this.props.dispatch(selectFeature(feature));
+            if (!feature.geometry) {
+                this.props.dispatch(
+                    getFeatureGeometry(
+                        feature, feature.layer.klass,
+                        (feature) => {
+                            this.props.dispatch(selectFeature(feature));
+                        })
+                );
+            } else {
+                this.props.dispatch(selectFeature(feature));
+            }
         }
     }
 
@@ -250,6 +260,7 @@ class LeftPanel extends Component {
             case CATCHMENT_ACTIONS:
             case LAKE_ACTIONS:
             case MONITORING:
+            case CATCHMENTS:
                 leaf.add_show_hide = true;
                 if (layer.visible) {
                     leaf.layers_visible = true;
@@ -295,6 +306,46 @@ class LeftPanel extends Component {
                 </div>;
             leaf.layers.push(div);
             this.key++;
+        }
+    }
+
+    add_buttons = (items, leaf) => {
+        for (let layer of leaf.layers.sort((a,b) => a.id - b.id)) {
+            let yt = 'YouTube://';
+            if (layer.table.startsWith(yt)) {
+                let video = layer.table.replace(yt, '');
+                items.push(
+                    <Item key={this.key}>
+                      <Item.Content>
+                        <MyModal video={video}
+                                 label={layer.label}
+                                 header={layer.kuvausotsikko}
+                                 otsikko={layer.otsikko}
+                                 kuvaus={layer.kuvaus}/>
+                      </Item.Content>
+                    </Item>
+                );
+            } else if (layer.legend === 'Checkbox') {
+                items.push(
+                    <Checkbox
+                      label={layer.name}
+                      onChange={(e, data) => this.toggleFocused(data.checked)}
+                      checked={this.props.focused}
+                      key={this.key+1}
+                    />
+                );
+            } else {
+                let words = layer.name.split(' | ');
+                let t = layer.visible ? words[0] : words[1];
+                items.push(
+                    <Item key={this.key}>
+                      <Item.Content>
+                        <Button onClick={this.onHideAll} key={this.key+2}>{t}</Button>
+                      </Item.Content>
+                    </Item>
+                );
+            }
+            this.key += 3;
         }
     }
 
@@ -501,46 +552,6 @@ class LeftPanel extends Component {
             );
         }
         return oikeudet;
-    }
-
-    add_buttons = (items, leaf) => {
-        for (let layer of leaf.layers.sort((a,b) => a.id - b.id)) {
-            let yt = 'YouTube://';
-            if (layer.table.startsWith(yt)) {
-                let video = layer.table.replace(yt, '');
-                items.push(
-                    <Item key={this.key}>
-                      <Item.Content>
-                        <MyModal video={video}
-                                 label={layer.label}
-                                 header={layer.kuvausotsikko}
-                                 otsikko={layer.otsikko}
-                                 kuvaus={layer.kuvaus}/>
-                      </Item.Content>
-                    </Item>
-                );
-            } else if (layer.legend === 'Checkbox') {
-                items.push(
-                    <Checkbox
-                      label={layer.name}
-                      onChange={(e, data) => this.toggleFocused(data.checked)}
-                      checked={this.props.focused}
-                      key={this.key+1}
-                    />
-                );
-            } else {
-                let words = layer.name.split(' | ');
-                let t = layer.visible ? words[0] : words[1];
-                items.push(
-                    <Item key={this.key}>
-                      <Item.Content>
-                        <Button onClick={this.onHideAll} key={this.key+2}>{t}</Button>
-                      </Item.Content>
-                    </Item>
-                );
-            }
-            this.key += 3;
-        }
     }
 
     render() {

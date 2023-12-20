@@ -253,29 +253,6 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case GET_ESTATES_OK:
-        layers = [];
-        for (let layer of state.layers) {
-            layers.push(layer);
-        }
-        // estates is one layer whose features can be individually visible/hidden
-        // and they are initially deferred (have no geometry) and not visible
-        let layer = action.data[0];
-        layer.id = crypto.randomUUID();
-        for (let estate of layer.features.features) {
-            estate.visible = false;
-        }
-        layers.push(layer);
-        return {
-            ...state,
-            layers: layers,
-            error: ''
-        };
-    case GET_ESTATES_FAIL:
-        return {
-            ...state,
-            error: action.error
-        };
     case GET_FEATURE_GEOMETRY_OK:
         layers = [];
         for (let layer of state.layers) {
@@ -544,7 +521,9 @@ const initReducer = (state=initialState, action) => {
                 if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
                     for (let feature of layer.features.features) {
                         feature.visible = true;
-                        bounds = expandBounds(bounds, feature.geometry.bounds);
+                        if (feature.geometry && feature.geometry.bounds) {
+                            bounds = expandBounds(bounds, feature.geometry.bounds);
+                        }
                     }
                 } else {
                     layer.visible = true;

@@ -116,35 +116,7 @@ export const getLayers = (set) => {
     };
 };
 
-export const getEstates = () => {
-    if (fitBoundsFinallyCalled) {
-        fitBoundsFinallyPending += 1;
-    }
-    return dispatch => {
-        let obj = {
-            method:"GET",
-            headers:{
-                "Accept-Encoding": "gzip"
-            }
-        };
-        let url = server + '/kohteet/' + ESTATES;
-        fetch(url, obj).then((response) => { // 200-499
-            if (response.ok) {
-                response.json().then(data => {
-                    dispatch(getEstatesOk(data));
-                }).catch(error => {
-                    dispatch(getEstatesFail(error));
-                });
-            } else {
-                dispatch(getEstatesFail(response.status));
-            }
-        }).catch((error) => { // 500-599
-            dispatch(getEstatesFail(error));
-        });
-    };
-};
-
-export const getFeatureGeometry = (feature, klass) => {
+export const getFeatureGeometry = (feature, klass, then) => {
     if (fitBoundsFinallyCalled) {
         fitBoundsFinallyPending += 1;
     }
@@ -168,12 +140,16 @@ export const getFeatureGeometry = (feature, klass) => {
             }
             Promise.all(cb2).then((datas) => {
                 dispatch(getFeatureGeometryOk(datas[0], klass));
+                if (then) {
+                    then(feature);
+                }
             });
         }).catch((error) => {
-            dispatch(getFeatureGeometryFail(error));
+            return dispatch(getFeatureGeometryFail(error));
         });
     };
 };
+
 
 export const getPopup = () => {
     return dispatch => {
@@ -344,10 +320,8 @@ export const getLeafsOk = (props, data) => {
         case LAKES: // creates BATHYMETRIES
         case CATCHMENT:
         case ACTIONS:
-            props.dispatch(getLayers(leaf.klass));
-            break;
         case ESTATES:
-            props.dispatch(getEstates());
+            props.dispatch(getLayers(leaf.klass));
             break;
         case RIGHTS:
             props.dispatch(getOikeudet());
