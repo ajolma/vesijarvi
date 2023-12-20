@@ -158,6 +158,9 @@ const initReducer = (state=initialState, action) => {
     let bounds;
     switch (action.type) {
     case GET_LEAFS_OK:
+        for (let leaf of action.data) {
+            leaf.lc_title = leaf.title.toLowerCase();
+        }
         return {
             ...state,
             leafs: toObject(action.data, 'klass'),
@@ -252,10 +255,6 @@ const initReducer = (state=initialState, action) => {
         };
     case GET_ESTATES_OK:
         layers = [];
-        features = [];
-        for (let i = 0; i < state.features.length; i++) {
-            features.push(state.features[i]);
-        }
         for (let layer of state.layers) {
             layers.push(layer);
         }
@@ -267,24 +266,9 @@ const initReducer = (state=initialState, action) => {
             estate.visible = false;
         }
         layers.push(layer);
-        for (let feature of layer.features.features) {
-            features.push({
-                layer: layer,
-                geometry: feature.geometry,
-                properties: feature.properties,
-            });
-        }
-        features.sort(function(a, b) {
-            let n = a.properties.nimi;
-            if (typeof n === 'undefined') {
-                n = '';
-            }
-            return n.localeCompare(b.properties.nimi, 'fi');
-        });
         return {
             ...state,
             layers: layers,
-            //features: features, estates have no initial geometry
             error: ''
         };
     case GET_ESTATES_FAIL:

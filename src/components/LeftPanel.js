@@ -234,9 +234,9 @@ class LeftPanel extends Component {
 
     key = 0;
 
-    add_layers = (leafs) => {
+    add_layers = () => {
         for (let layer of this.props.layers) {
-            let leaf = leafs[layer.klass];
+            let leaf = this.props.leafs[layer.klass];
             let legend = layer.visible ? layer.legend : layer.legend_hidden;
             let h = layer.graphic_height;
             let w = layer.graphic_width;
@@ -298,13 +298,13 @@ class LeftPanel extends Component {
         }
     }
 
-    add_bg_maps = (leafs) => {
+    add_bg_maps = () => {
         for (let i = 0; i < this.props.backgrounds.length; i++) {
             let bg = this.props.backgrounds[i];
             let legend = this.layer_legend(bg.visible, i);
             let name = this.layer_name(bg.visible, i, bg.otsikko);
             let descr = this.layer_descr(bg.visible, i, bg.kuvaus);
-            leafs['bg'].layers.push(
+            this.props.leafs['bg'].layers.push(
                 <div key={this.key} onClick={this.selectBackground} id={i} style={{cursor: 'pointer'}}>
                   {legend} {name} <br/> {descr}
                 </div>
@@ -313,7 +313,7 @@ class LeftPanel extends Component {
         }
     }
 
-    add_estates = (leafs) => {
+    add_estates = () => {
         for (let i = 0; i < this.props.layers.length; i++) {
             if (this.props.layers[i].klass === ESTATES) {
                 let layer = this.props.layers[i];
@@ -321,7 +321,7 @@ class LeftPanel extends Component {
                 for (let i = 0; i < estates.length; i++) {
                     let estate = estates[i];
                     let img = this.layer_legend(estate.visible, estate.id);
-                    leafs[ESTATES].layers.push(
+                    this.props.leafs[ESTATES].layers.push(
                         <div key={this.key}
                              onClick={this.onClickOnFeature}
                              klass={ESTATES}
@@ -337,7 +337,7 @@ class LeftPanel extends Component {
         }
     }
 
-    add_bathymetries = (leafs) => {
+    add_bathymetries = () => {
         for (let i = 0; i < this.props.layers.length; i++) {
             if (this.props.layers[i].klass === BATHYMETRIES) {
                 let layer = this.props.layers[i];
@@ -345,7 +345,7 @@ class LeftPanel extends Component {
                 for (let i = 0; i < estates.length; i++) {
                     let estate = estates[i];
                     let img = this.layer_legend(estate.visible, estate.id);
-                    leafs[BATHYMETRIES].layers.push(
+                    this.props.leafs[BATHYMETRIES].layers.push(
                         <div key={this.key}
                              onClick={this.onClickOnFeature}
                              klass={BATHYMETRIES}
@@ -361,18 +361,18 @@ class LeftPanel extends Component {
         }
     }
 
-    add_show_hide = (leafs) => {
-        for (let [klass, leaf] of Object.entries(leafs)) {
+    add_show_hide = () => {
+        for (let [klass, leaf] of Object.entries(this.props.leafs)) {
             if (leaf.add_show_hide) {
                 let imgUrl, name, id;
                 if (leaf.layers_visible) {
                     imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
                     id = klass;
-                    name = <span id={id} className="">Piilota kaikki {leaf.title}</span>;
+                    name = <span id={id} className="">Piilota kaikki {leaf.lc_title}</span>;
                 } else {
                     id = klass;
                     imgUrl = process.env.PUBLIC_URL + '/media/yes.svg';
-                    name = <span id={id} className="">Näytä kaikki {leaf.title}</span>;
+                    name = <span id={id} className="">Näytä kaikki {leaf.lc_title}</span>;
                 }
                 let div =
                     <div key={this.key} onClick={this.onLeafShowHideClick} id={id} style={{cursor: 'pointer'}}>
@@ -503,8 +503,8 @@ class LeftPanel extends Component {
         return oikeudet;
     }
 
-    add_buttons = (items, buttons) => {
-        for (let layer of buttons.layers.sort((a,b) => a.id - b.id)) {
+    add_buttons = (items, leaf) => {
+        for (let layer of leaf.layers.sort((a,b) => a.id - b.id)) {
             let yt = 'YouTube://';
             if (layer.table.startsWith(yt)) {
                 let video = layer.table.replace(yt, '');
@@ -557,31 +557,27 @@ class LeftPanel extends Component {
             );
         }
 
-        let leafs = {};
         for (let [klass, leaf] of Object.entries(this.props.leafs)) {
-            leafs[leaf.klass] = {
-                layers: [],
-                active: leaf.active > 0,
-                title: leaf.title.toLowerCase(),
-            };
+            leaf.layers = [];
+            leaf.layers_visible = false;
         }
 
         this.key = 0;
-        this.add_bg_maps(leafs);
-        this.add_layers(leafs);
-        this.add_estates(leafs);
-        this.add_bathymetries(leafs);
-        this.add_show_hide(leafs);
+        let items = [];
+        this.add_layers();
+        this.add_buttons(items, this.props.leafs[BUTTONS]);
+        this.add_bg_maps();
+        this.add_estates();
+        this.add_bathymetries();
+        this.add_show_hide();
         let datalist = this.get_datalist();
         let flags = this.get_flags();
         let kuvaukset = this.get_kuvaukset();
         let oikeudet = this.get_oikeudet();
 
-        let items = [];
         let accs = [];
         for (let [klass, leaf] of Object.entries(this.props.leafs)) {
-            if (leaf.klass === BUTTONS) {
-                this.add_buttons(items, leafs[leaf.klass]);
+            if (leaf.contents === 'widgets') {
                 continue;
             }
             let active = leaf.active > 0;
@@ -632,7 +628,7 @@ class LeftPanel extends Component {
             default:
                 content =
                     <div className="left-para">
-                      {leafs[leaf.klass].layers}
+                      {leaf.layers}
                     </div>;
             }
             accs.push(

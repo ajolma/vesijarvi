@@ -5,6 +5,7 @@ export const BG = 'bg';
 export const CATCHMENT_ACTIONS = 'catchment_actions';
 export const LAKE_ACTIONS = 'lake_actions';
 export const MONITORING = 'monitoring';
+export const CATCHMENTS = 'catchments';
 export const LAKES = 'lakes';
 export const CATCHMENT = 'catchment';
 export const ESTATES = 'estates';
@@ -83,12 +84,12 @@ export const getLeafs = (props) => {
 };
 
 export const getLayers = (set) => {
-    if (fitBoundsFinallyCalled) {
-        fitBoundsFinallyPending += 1;
-    }
-    return dispatch => {
-        let obj = {
-            method:"GET",
+  if (fitBoundsFinallyCalled) {
+    fitBoundsFinallyPending += 1;
+  }
+  return dispatch => {
+    let obj = {
+    method:"GET",
             headers:{
                 "Accept-Encoding": "gzip"
             }
@@ -339,6 +340,7 @@ export const getLeafsOk = (props, data) => {
         case CATCHMENT_ACTIONS:
         case LAKE_ACTIONS:
         case MONITORING:
+        case CATCHMENTS:
         case LAKES: // creates BATHYMETRIES
         case CATCHMENT:
         case ACTIONS:
