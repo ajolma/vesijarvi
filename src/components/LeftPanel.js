@@ -3,7 +3,7 @@ import { Menu, Input, Accordion, Icon, List, Label, Form, TextArea, Button, Divi
        } from 'semantic-ui-react';
 import { connect } from 'react-redux';
 import { BUTTONS,
-         CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, CATCHMENTS, LAKES, CATCHMENT, ESTATES, BATHYMETRIES,
+         CATCHMENT_ACTIONS, LAKE_ACTIONS, MONITORING, LAKES, CATCHMENT,
          ACTIONS, RIGHTS, FUNDERS, FEEDBACK,
          hideLayer, hideLayers, showLayer, showLayers, hideLeaf, showLeaf,
          selectFeature,
@@ -13,7 +13,6 @@ import { BUTTONS,
          fitBoundsFinally
        } from '../actions/initAction';
 import { setBounds } from '../reducers/initReducer';
-import { fitBounds } from './MyMap';
 import MyModal from './Video';
 
 import './LeftPanel.css';
@@ -84,7 +83,7 @@ class LeftPanel extends Component {
         let visible = false;
         for (let layer of this.props.layers) {
             if (layer.klass === klass) {
-                if (klass === ESTATES || klass === BATHYMETRIES) {
+                if (this.props.leafs[klass].contents === 'features') {
                     for (let feature of layer.features.features) {
                         if (feature.visible) {
                             visible = true;
@@ -104,8 +103,7 @@ class LeftPanel extends Component {
         } else {
             for (let layer of this.props.layers) {
                 this.props.dispatch(fitBoundsFinally());
-                let is_features = klass === ESTATES || klass === BATHYMETRIES;
-                if (is_features && layer.klass === klass) {
+                if (layer.klass === klass && this.props.leafs[klass].contents === 'features') {
                     for (let feature of layer.features.features) {
                         if (!feature.geometry) {
                             this.props.dispatch(getFeatureGeometry(feature, klass));
@@ -260,23 +258,10 @@ class LeftPanel extends Component {
             case CATCHMENT_ACTIONS:
             case LAKE_ACTIONS:
             case MONITORING:
-            case CATCHMENTS:
                 leaf.add_show_hide = true;
                 if (layer.visible) {
                     leaf.layers_visible = true;
                 }
-                break;
-            case BATHYMETRIES:
-            case ESTATES:
-                leaf.add_show_hide = true;
-                // each feature is a layer in left panel sense
-                for (let feature of layer.features.features) {
-                    if (feature.visible) {
-                        leaf.layers_visible = true;
-                        break;
-                    }
-                }
-                c = true;
                 break;
             case CATCHMENT:
             case LAKES:
@@ -292,6 +277,15 @@ class LeftPanel extends Component {
                 }
                 break;
             default:
+                if (this.props.leafs[layer.klass].contents === 'features') {
+                    leaf.add_show_hide = true;
+                    for (let feature of layer.features.features) {
+                        if (feature.visible) {
+                            leaf.layers_visible = true;
+                            break;
+                        }
+                    }
+                }
                 c = true;
                 break;
             }
@@ -364,45 +358,20 @@ class LeftPanel extends Component {
         }
     }
 
-    add_estates = () => {
-        for (let i = 0; i < this.props.layers.length; i++) {
-            if (this.props.layers[i].klass === ESTATES) {
-                let layer = this.props.layers[i];
-                let estates = layer.features.features;
-                for (let i = 0; i < estates.length; i++) {
-                    let estate = estates[i];
-                    let img = this.layer_legend(estate.visible, estate.id);
-                    this.props.leafs[ESTATES].layers.push(
+    add_layers_from_features = (klass) => {
+        for (let layer of this.props.layers) {
+            if (layer.klass === klass) {
+                let features = layer.features.features;
+                for (let i = 0; i < features.length; i++) {
+                    let feature = features[i];
+                    let img = this.layer_legend(feature.visible, feature.id);
+                    this.props.leafs[klass].layers.push(
                         <div key={this.key}
                              onClick={this.onClickOnFeature}
-                             klass={ESTATES}
+                             klass={klass}
                              id={i}
                              style={{cursor: 'pointer'}}>
-                          {img} {estate.properties.nimi}
-                        </div>
-                    );
-                    this.key++;
-                }
-                break;
-            }
-        }
-    }
-
-    add_bathymetries = () => {
-        for (let i = 0; i < this.props.layers.length; i++) {
-            if (this.props.layers[i].klass === BATHYMETRIES) {
-                let layer = this.props.layers[i];
-                let estates = layer.features.features;
-                for (let i = 0; i < estates.length; i++) {
-                    let estate = estates[i];
-                    let img = this.layer_legend(estate.visible, estate.id);
-                    this.props.leafs[BATHYMETRIES].layers.push(
-                        <div key={this.key}
-                             onClick={this.onClickOnFeature}
-                             klass={BATHYMETRIES}
-                             id={i}
-                             style={{cursor: 'pointer'}}>
-                          {img} {estate.properties.nimi}
+                          {img} {feature.properties.nimi}
                         </div>
                     );
                     this.key++;
@@ -419,11 +388,11 @@ class LeftPanel extends Component {
                 if (leaf.layers_visible) {
                     imgUrl = process.env.PUBLIC_URL + '/media/no.svg';
                     id = klass;
-                    name = <span id={id} className="">Piilota kaikki {leaf.lc_title}</span>;
+                    name = <span id={id} className="">Piilota kaikki</span>; // {leaf.lc_title}
                 } else {
                     id = klass;
                     imgUrl = process.env.PUBLIC_URL + '/media/yes.svg';
-                    name = <span id={id} className="">Näytä kaikki {leaf.lc_title}</span>;
+                    name = <span id={id} className="">Näytä kaikki</span>;
                 }
                 let div =
                     <div key={this.key} onClick={this.onLeafShowHideClick} id={id} style={{cursor: 'pointer'}}>
@@ -568,7 +537,7 @@ class LeftPanel extends Component {
             );
         }
 
-        for (let [klass, leaf] of Object.entries(this.props.leafs)) {
+        for (let leaf of Object.values(this.props.leafs)) {
             leaf.layers = [];
             leaf.layers_visible = false;
         }
@@ -578,8 +547,11 @@ class LeftPanel extends Component {
         this.add_layers();
         this.add_buttons(items, this.props.leafs[BUTTONS]);
         this.add_bg_maps();
-        this.add_estates();
-        this.add_bathymetries();
+        for (let klass of Object.keys(this.props.leafs)) {
+            if (this.props.leafs[klass].contents === 'features') {
+                this.add_layers_from_features(klass);
+            }
+        }
         this.add_show_hide();
         let datalist = this.get_datalist();
         let flags = this.get_flags();
@@ -587,7 +559,8 @@ class LeftPanel extends Component {
         let oikeudet = this.get_oikeudet();
 
         let accs = [];
-        for (let [klass, leaf] of Object.entries(this.props.leafs)) {
+        let sorted = Object.values(this.props.leafs).sort(function(a, b) {return a.order - b.order;});
+        for (let leaf of sorted) {
             if (leaf.contents === 'widgets') {
                 continue;
             }

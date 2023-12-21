@@ -7,7 +7,7 @@ import { MapContainer, useMap, TileLayer, Popup,
          Polygon, Polyline, Tooltip, ScaleControl, Marker
        } from 'react-leaflet';
 import './MyMap.css';
-import { LAKES, CATCHMENT, BATHYMETRIES, ESTATES } from '../actions/initAction';
+import { LAKES, CATCHMENT, CATCHMENTS, CATCHMENTS2, BATHYMETRIES, ESTATES } from '../actions/initAction';
 
 export const make_popup_contents = (popup, feature) => {
     let items = [];
@@ -281,6 +281,7 @@ class MyMap extends Component {
 
     add_lake = (layers, layer, feature) => {
         let p = feature.properties;
+        console.log(p);
         let fill_color = p.fill_color || layer.fill_color;
         let fill_opacity = layer.fill_opacity || 0.0;
         let tooltip = p.nimi || p.name || p.kohdetyyppi;
@@ -301,18 +302,17 @@ class MyMap extends Component {
 
     add_rivers_and_lakes = (layers) => {
         for (let layer of this.props.layers) {
-            if (layer.klass !== LAKES && layer.klass !== CATCHMENT) {
-                continue;
-            }
-            let from_net = layer.table.substr(0, 4) === 'http';
-            if (!layer.visible || from_net) {
-                continue;
-            }
-            for (let feature of layer.features.features) {
-                if (feature.geometry.type === 'Polyline') {
-                    this.add_river(layers, layer, feature);
-                } else if (feature.geometry.type === 'Polygon') {
-                    this.add_lake(layers, layer, feature);
+            if (layer.klass === CATCHMENT) {
+                let from_net = layer.table.substr(0, 4) === 'http';
+                if (!layer.visible || from_net) {
+                    continue;
+                }
+                for (let feature of layer.features.features) {
+                    if (feature.geometry.type === 'Polyline') {
+                        this.add_river(layers, layer, feature);
+                    } else if (feature.geometry.type === 'Polygon') {
+                        this.add_lake(layers, layer, feature);
+                    }
                 }
             }
         }
@@ -358,6 +358,38 @@ class MyMap extends Component {
 
         this.set_bg(layers);
         this.add_overlays(layers);
+
+        for (let layer of this.props.layers) {
+            if (layer.klass === CATCHMENTS || layer.klass === CATCHMENTS2 || layer.klass === LAKES) {
+                let visible = layer.visible;
+                for (let feature of layer.features.features) {
+                    if (layer.leaf.contents === 'features') {
+                        visible = feature.visible;
+                    }
+                    if (feature.geometry && visible) {
+                        let p = feature.properties;
+                        let fill_color = p.fill_color || layer.fill_color;
+                        let tooltip = p.nimi || p.name || p.kohdetyyppi;
+                        let popup = layer.popup ? this.make_popup(feature) : null;
+                        for (let coords of feature.geometry.coordinates) {
+                            layers.push(
+                                <Polygon key={uuidv4()}
+                                         fillColor={fill_color}
+                                         fillOpacity={layer.fill_opacity}
+                                         color={layer.stroke_color}
+                                         weight={layer.stroke_width}
+                                         opacity={layer.fill_opacity}
+                                         positions={coords}>
+                                  <Tooltip>{tooltip}</Tooltip>
+                                  {popup}
+                                </Polygon>
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
         this.add_estates(layers);
         this.add_bathymetry(layers);
         this.add_rivers_and_lakes(layers);

@@ -6,6 +6,7 @@ export const CATCHMENT_ACTIONS = 'catchment_actions';
 export const LAKE_ACTIONS = 'lake_actions';
 export const MONITORING = 'monitoring';
 export const CATCHMENTS = 'catchments';
+export const CATCHMENTS2 = 'catchments2';
 export const LAKES = 'lakes';
 export const CATCHMENT = 'catchment';
 export const ESTATES = 'estates';
@@ -312,17 +313,7 @@ export const getLeafsOk = (props, data) => {
         case BG:
             props.dispatch(getBackground());
             break;
-        case BUTTONS:
-        case CATCHMENT_ACTIONS:
-        case LAKE_ACTIONS:
-        case MONITORING:
-        case CATCHMENTS:
-        case LAKES: // creates BATHYMETRIES
-        case CATCHMENT:
-        case ACTIONS:
-        case ESTATES:
-            props.dispatch(getLayers(leaf.klass));
-            break;
+
         case RIGHTS:
             props.dispatch(getOikeudet());
             break;
@@ -330,7 +321,9 @@ export const getLeafsOk = (props, data) => {
             props.dispatch(getFlags());
             break;
         case FEEDBACK:
+            break;
         default:
+            props.dispatch(getLayers(leaf.klass));
             break;
         }
     }

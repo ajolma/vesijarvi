@@ -1,11 +1,10 @@
-import { BUTTONS, ESTATES, BATHYMETRIES, LAKES,
+import { BUTTONS, BATHYMETRIES, LAKES,
          GET_LEAFS_OK, GET_LEAFS_FAIL,
          GET_POPUP_OK, GET_POPUP_FAIL,
          GET_LAYERS_OK, GET_LAYERS_FAIL,
          GET_OIKEUDET_OK, GET_OIKEUDET_FAIL,
          GET_BACKGROUND_OK, GET_BACKGROUND_FAIL,
          GET_FLAGS_OK, GET_FLAGS_FAIL,
-         GET_ESTATES_OK, GET_ESTATES_FAIL,
          GET_FEATURE_GEOMETRY_OK, GET_FEATURE_GEOMETRY_FAIL,
          SELECT_BACKGROUND,
          SHOW_LAYER, SHOW_LAYERS, HIDE_LAYER, HIDE_LAYERS,
@@ -107,7 +106,7 @@ export const setBounds = (layers, full) => {
         if (layer.table && layer.table.startsWith('https')) {
             continue;
         }
-        if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
+        if (layer.leaf.contents === 'features') {
             for (let feature of layer.features.features) {
                 if (feature.visible && feature.geometry && feature.geometry.bounds) {
                     bounds = expandBounds(bounds, feature.geometry.bounds);
@@ -194,6 +193,7 @@ const initReducer = (state=initialState, action) => {
         }
         for (let layer of action.data) {
             layer.id = crypto.randomUUID();
+            layer.leaf = state.leafs[layer.klass];
             if (layer.klass === LAKES) {
                 // add bathymetries as a layer whose features can be individually visible/hidden
                 // they are initially deferred (have no geometry) and not visible
@@ -218,17 +218,34 @@ const initReducer = (state=initialState, action) => {
                             features: from_lakes,
                         },
                         visible: false,
+                        leaf: {
+                            contents: 'features',
+                        }
                     });
                 }
             }
             layers.push(layer);
             if (layer.features) {
+                layer.features.features.sort(function(a, b) {
+                    let n = a.properties.nimi;
+                    if (typeof n === 'undefined') {
+                        n = '';
+                    }
+                    return n.localeCompare(b.properties.nimi, 'fi');
+                });
                 for (let feature of layer.features.features) {
-                    features.push({
+                    feature.visible = false;
+                    let f = {
                         layer: layer,
                         geometry: feature.geometry,
                         properties: feature.properties,
-                    });
+                    };
+                    if (feature.geometry) {
+                        feature.geometry.bounds = getBounds(feature.geometry.coordinates);
+                        f.geometry = feature.geometry;
+                        f.geometry.bounds = feature.geometry.bounds;
+                    }
+                    features.push(f);
                 }
             }
         }
@@ -452,11 +469,9 @@ const initReducer = (state=initialState, action) => {
         layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
-            if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
-                for (let j = 0; j < layer.features.features.length; j++) {
-                    for (let feature of layer.features.features) {
-                        feature.visible = false;
-                    }
+            if (layer.leaf.contents === 'features') {
+                for (let feature of layer.features.features) {
+                    feature.visible = false;
                 }
             }
             layer.visible = false;
@@ -473,7 +488,7 @@ const initReducer = (state=initialState, action) => {
             if (layer.klass !== action.klass) {
                 continue;
             }
-            if (action.klass === BATHYMETRIES || action.klass === ESTATES) {
+            if (state.leafs[action.klass].contents === 'features') {
                 for (let feature of layer.features.features) {
                     feature.visible = true;
                 }
@@ -496,7 +511,7 @@ const initReducer = (state=initialState, action) => {
             if (layer.klass !== action.klass) {
                 continue;
             }
-            if (action.klass === BATHYMETRIES || action.klass === ESTATES) {
+            if (state.leafs[action.klass].contents === 'features') {
                 for (let feature of layer.features.features) {
                     feature.visible = false;
                 }
@@ -518,7 +533,7 @@ const initReducer = (state=initialState, action) => {
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.id === action.feature.layer.id) {
-                if (layer.klass === BATHYMETRIES || layer.klass === ESTATES) {
+                if (layer.leaf.contents === 'features') {
                     for (let feature of layer.features.features) {
                         feature.visible = true;
                         if (feature.geometry && feature.geometry.bounds) {
