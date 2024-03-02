@@ -69,7 +69,10 @@ sub call {
 
 sub leafs {
     my ($self, $dbh) = @_;
-    my $sql = "select * from leafs order by nr";
+    my $sql =
+        "select l.id,l.title,l.active,l.nr,l.layers,l.klass,l.contents,c.color " .
+        "from leafs l left join leaf_colors c on l.color=c.id " .
+        "order by nr";
     my $sth = $dbh->prepare($sql) or error(500, $dbh->errstr);
     my $rv = $sth->execute or error(500, $dbh->errstr);
     my @leafs;

@@ -152,7 +152,7 @@ function toObject(arr, key) {
 }
 
 const initReducer = (state=initialState, action) => {
-    //console.log(action);
+    console.log(action);
     let leafs;
     let bounds;
     switch (action.type) {
@@ -535,10 +535,16 @@ const initReducer = (state=initialState, action) => {
             if (layer.id === action.feature.layer.id) {
                 if (layer.leaf.contents === 'features') {
                     for (let feature of layer.features.features) {
+                        if (feature.properties.id === action.feature.properties.id) {
+                            feature.visible = true;
+                            bounds = expandBounds(bounds, feature.geometry.bounds);
+                        }
+                        /*
                         feature.visible = true;
                         if (feature.geometry && feature.geometry.bounds) {
                             bounds = expandBounds(bounds, feature.geometry.bounds);
                         }
+                        */
                     }
                 } else {
                     layer.visible = true;

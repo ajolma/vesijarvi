@@ -281,7 +281,7 @@ class MyMap extends Component {
 
     add_lake = (layers, layer, feature) => {
         let p = feature.properties;
-        console.log(p);
+        //console.log(p);
         let fill_color = p.fill_color || layer.fill_color;
         let fill_opacity = layer.fill_opacity || 0.0;
         let tooltip = p.nimi || p.name || p.kohdetyyppi;

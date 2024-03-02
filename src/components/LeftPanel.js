@@ -164,6 +164,7 @@ class LeftPanel extends Component {
         if (e.target.value !== '' && this.places.hasOwnProperty(e.target.value)) {
             let index = this.places[e.target.value];
             let feature = this.props.features[index];
+            console.log(index,feature);
             if (!feature.geometry) {
                 this.props.dispatch(
                     getFeatureGeometry(
@@ -565,7 +566,7 @@ class LeftPanel extends Component {
                 continue;
             }
             let active = leaf.active > 0;
-            let color = active ? 'teal' : 'grey';
+            let color = active ? 'teal' : leaf.color;
             accs.push(
                 <Accordion.Title active={active} klass={leaf.klass} onClick={this.handleClick} key={this.key}>
                   <Icon name='dropdown' />
