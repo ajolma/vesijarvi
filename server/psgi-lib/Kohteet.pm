@@ -128,15 +128,17 @@ sub bathymetries {
     my $r = $sth->fetchrow_hashref;
     return json200({}) unless $r->{syvyyskartta};
     my $geom = geometry('geom');
-    $sql = "SELECT $geom FROM syvyyskartat.\"$r->{syvyyskartta}\"";
+    $sql = "SELECT $geom, syvyys FROM syvyyskartat.\"$r->{syvyyskartta}\" order by syvyys";
     $sth = $dbh->prepare($sql) or return error(500, $dbh->errstr);
     $rv = $sth->execute or return error(500, $dbh->errstr);
     my $coll = [];
+    my @syvyydet = ();
     while (my $r = $sth->fetchrow_hashref) {
         my $g = decode_json $r->{geom};
         $g = $g->{coordinates};
         swap_xy($g);
         push @$coll, $g;
+        push @syvyydet, $r->{syvyys};
     }
     my $response = {
         type => 'Feature',
@@ -146,6 +148,7 @@ sub bathymetries {
         },
         properties => {
             id => 0 + $id,
+            syvyydet => "@syvyydet",
         }
     };
     return json200($response);

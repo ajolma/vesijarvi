@@ -1,0 +1,5 @@
+Copy app.conf.template to app.conf and edit it.
+
+To test run starman
+
+In production run plackup

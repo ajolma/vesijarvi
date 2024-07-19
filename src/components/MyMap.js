@@ -247,15 +247,23 @@ class MyMap extends Component {
                 for (let bathymetry of layer.features.features) {
                     if (bathymetry.geometry && bathymetry.visible) {
                         let fill_opacity = bathymetry.properties.fill_opacity;
-                        let stroke = false;
+                        let syvyydet = [];
+                        if (bathymetry.properties.syvyydet) {
+                            syvyydet = bathymetry.properties.syvyydet.split(" ");
+                        }
+                        let i = 0;
                         for (let coords of bathymetry.geometry.coordinates) {
+                            let syvyys = syvyydet[i];
+                            i++;
                             layers.push(
                                 <Polygon key={uuidv4()}
                                          fillColor="blue"
                                          fillOpacity={fill_opacity}
-                                         stroke={stroke}
+                                         color="black"
+                                         stroke="true"
                                          opacity={fill_opacity}
                                          positions={coords}>
+                                  <Popup isDraggable={true}><p>syvyys={syvyys} m</p></Popup>
                                 </Polygon>
                             );
                         }

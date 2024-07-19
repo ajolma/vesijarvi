@@ -60,35 +60,16 @@ export const getBounds = (coordinates, bounds) => {
             bounds[1][1] = y > bounds[1][1] ? y : bounds[1][1];
         }
     };
-    if (Array.isArray(coordinates[0])) {
-        for (let i = 0; i < coordinates.length; i++) {
-            let c2 = coordinates[i];
-            if (Array.isArray(c2[0])) {
-                for (let j = 0; j < c2.length; j++) {
-                    let c3 = c2[j];
-                    if (Array.isArray(c3[0])) {
-                        for (let k = 0; k < c3.length; k++) {
-                            let c4 = c3[k];
-                            if (Array.isArray(c4[0])) {
-                                for (let l = 0; l < c4.length; l++) {
-                                    let c5 = c4[k];
-                                    set_minmax_from(c5[0], c5[1]);
-                                }
-                            } else {
-                                set_minmax_from(c4[0], c4[1]);
-                            }
-                        }
-                    } else {
-                        set_minmax_from(c3[0], c3[1]);
-                    }
-                }
-            } else {
-                set_minmax_from(c2[0], c2[1]);
+    let handle_coords = (coords) => {
+        if (Array.isArray(coords[0])) {
+            for (let c of coords) {
+                handle_coords(c);
             }
+        } else {
+            set_minmax_from(coords[0], coords[1]);
         }
-    } else {
-        set_minmax_from(coordinates[0], coordinates[1]);
-    }
+    };
+    handle_coords(coordinates);
     if (bounds[0][0] < bounds[0][1]) {
         let a = bounds[0][0];
         bounds[0][0] = bounds[0][1];
@@ -205,7 +186,7 @@ const initReducer = (state=initialState, action) => {
                             properties: {
                                 id: lake.properties.id,
                                 nimi: lake.properties.nimi,
-                                fill_opacity: lake.properties.fill_opacity,
+                                fill_opacity: layer.fill_opacity,
                             }
                         });
                     }
@@ -279,6 +260,7 @@ const initReducer = (state=initialState, action) => {
                     if (feature.properties.id === action.data.properties.id) {
                         feature.geometry = action.data.geometry;
                         feature.geometry.bounds = getBounds(feature.geometry.coordinates);
+                        feature.properties.syvyydet = action.data.properties.syvyydet;
                         feature.visible = true;
                     }
                 }
