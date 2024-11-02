@@ -29,6 +29,7 @@ sub cors {
 
 my $root = $config->{root};
 builder {
+    enable "Plack::Middleware::AccessLog", format => "combined";
     enable 'ReverseProxy';
     enable "Deflater", content_type => ['application/json'], vary_user_agent => 1;
     enable \&cors;
