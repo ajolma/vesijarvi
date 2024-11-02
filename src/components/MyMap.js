@@ -405,7 +405,15 @@ class MyMap extends Component {
 
         return (
             <MapContainer
-              ref={a => map = a}
+              ref={a => {
+                  map = a;
+                  if (map) {
+                      let title = 'A JavaScript library for interactive maps';
+                      map.attributionControl.setPrefix(
+                          '<a href="https://leafletjs.com" title="' + title + '" target="_blank">Leaflet</a>'
+                      );
+                  }
+              }}
               center={this.props.latlng}
               zoom={this.props.zoom}
               eventHandlers={this.on_ref}

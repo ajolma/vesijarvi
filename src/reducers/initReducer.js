@@ -60,6 +60,7 @@ export const getBounds = (coordinates, bounds) => {
             bounds[1][1] = y > bounds[1][1] ? y : bounds[1][1];
         }
     };
+    /*
     let handle_coords = (coords) => {
         if (Array.isArray(coords[0])) {
             for (let c of coords) {
@@ -70,6 +71,40 @@ export const getBounds = (coordinates, bounds) => {
         }
     };
     handle_coords(coordinates);
+    */
+
+    // 8<---
+    if (Array.isArray(coordinates[0])) {
+        for (let i = 0; i < coordinates.length; i++) {
+            let c2 = coordinates[i];
+            if (Array.isArray(c2[0])) {
+                for (let j = 0; j < c2.length; j++) {
+                    let c3 = c2[j];
+                    if (Array.isArray(c3[0])) {
+                        for (let k = 0; k < c3.length; k++) {
+                            let c4 = c3[k];
+                            if (Array.isArray(c4[0])) {
+                                for (let l = 0; l < c4.length; l++) {
+                                    let c5 = c4[k];
+                                    set_minmax_from(c5[0], c5[1]);
+                                }
+                            } else {
+                                set_minmax_from(c4[0], c4[1]);
+                            }
+                        }
+                    } else {
+                        set_minmax_from(c3[0], c3[1]);
+                    }
+                }
+            } else {
+                set_minmax_from(c2[0], c2[1]);
+            }
+        }
+    } else {
+        set_minmax_from(coordinates[0], coordinates[1]);
+    }
+    // 8<---
+
     if (bounds[0][0] < bounds[0][1]) {
         let a = bounds[0][0];
         bounds[0][0] = bounds[0][1];
@@ -133,9 +168,7 @@ function toObject(arr, key) {
 }
 
 const initReducer = (state=initialState, action) => {
-    console.log(action);
-    let leafs;
-    let bounds;
+    console.log(action.type,action);
     switch (action.type) {
     case GET_LEAFS_OK:
         for (let leaf of action.data) {
@@ -186,7 +219,7 @@ const initReducer = (state=initialState, action) => {
                             properties: {
                                 id: lake.properties.id,
                                 nimi: lake.properties.nimi,
-                                fill_opacity: layer.fill_opacity,
+                                fill_opacity: lake.properties.fill_opacity,
                             }
                         });
                     }
@@ -251,8 +284,8 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case GET_FEATURE_GEOMETRY_OK:
-        layers = [];
+    case GET_FEATURE_GEOMETRY_OK: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass === action.klass) {
@@ -274,6 +307,7 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
+    }
     case GET_FEATURE_GEOMETRY_FAIL:
         return {
             ...state,
@@ -305,14 +339,14 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case SELECT_BACKGROUND:
-        backgrounds = [];
+    case SELECT_BACKGROUND: {
+        let backgrounds = [];
         for (let i = 0; i < state.backgrounds.length; i++) {
             let background = state.backgrounds[i];
             background.visible = false;
             backgrounds.push(background);
         }
-        default_set = false;
+        let default_set = false;
         for (let i = 0; i < state.backgrounds.length; i++) {
             let background = state.backgrounds[i];
             if (action.index === i) {
@@ -329,6 +363,7 @@ const initReducer = (state=initialState, action) => {
             backgrounds: backgrounds,
             error: ''
         };
+    }
     case GET_OIKEUDET_OK:
         return {
             ...state,
@@ -350,8 +385,8 @@ const initReducer = (state=initialState, action) => {
             ...state,
             error: action.error
         };
-    case SHOW_FEATURE:
-        layers = [];
+    case SHOW_FEATURE: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass === action.klass) {
@@ -373,8 +408,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case HIDE_FEATURE:
-        layers = [];
+    }
+    case HIDE_FEATURE: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass === action.klass) {
@@ -393,8 +429,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case SHOW_LAYER:
-        layers = [];
+    }
+    case SHOW_LAYER: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.id === action.layer.id) {
@@ -412,8 +449,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case HIDE_LAYER:
-        layers = [];
+    }
+    case HIDE_LAYER: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.id === action.layer.id) {
@@ -428,8 +466,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case SHOW_LAYERS:
-        layers = [];
+    }
+    case SHOW_LAYERS: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (initiallyVisible[layer.name]) {
@@ -447,8 +486,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case HIDE_LAYERS:
-        layers = [];
+    }
+    case HIDE_LAYERS: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.leaf.contents === 'features') {
@@ -463,8 +503,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case SHOW_LEAF:
-        layers = [];
+    }
+    case SHOW_LEAF: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass !== action.klass) {
@@ -486,8 +527,9 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case HIDE_LEAF:
-        layers = [];
+    }
+    case HIDE_LEAF: {
+        let layers = [];
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.klass !== action.klass) {
@@ -509,9 +551,10 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
-    case SELECT_FEATURE:
-        layers = [];
-        bounds = null;
+    }
+    case SELECT_FEATURE: {
+        let layers = [];
+        let bounds = null;
         for (let layer of state.layers) {
             layers.push(layer);
             if (layer.id === action.feature.layer.id) {
@@ -542,14 +585,15 @@ const initReducer = (state=initialState, action) => {
             layers: layers,
             error: ''
         };
+    }
     case UNSELECT_FEATURE:
         return {
             ...state,
             selected_feature: null,
             error: ''
         };
-    case SET_ACTIVE:
-        leafs = {};
+    case SET_ACTIVE: {
+        let leafs = {};
         for (let [klass, leaf] of Object.entries(state.leafs)) {
             if (klass === action.klass) {
                 leaf.active = 1;
@@ -561,8 +605,9 @@ const initReducer = (state=initialState, action) => {
             leafs: leafs,
             error: ''
         };
-    case SET_UNACTIVE:
-        leafs = {};
+    }
+    case SET_UNACTIVE: {
+        let leafs = {};
         for (let [klass, leaf] of Object.entries(state.leafs)) {
             if (klass === action.klass) {
                 leaf.active = 0;
@@ -574,6 +619,7 @@ const initReducer = (state=initialState, action) => {
             leafs: leafs,
             error: ''
         };
+    }
     case SET_FOCUSED:
         return {
             ...state,

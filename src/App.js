@@ -5,7 +5,7 @@ import { fitBoundsFinally, getLeafs, getPopup } from './actions/initAction';
 import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
-const dev = process.env.NODE_ENV === 'development';
+const dev = process.env.ENV === 'development';
 if (dev) {
     console.log("This is development environment.");
 }

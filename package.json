@@ -21,7 +21,7 @@
         "eject": "react-scripts eject"
     },
     "ahomepage": "https://www.vesijarvi.fi/karttaohjelma/",
-    "homepage": "https://biwatech.com/vesijarvi-test/",
+    "homepage": "https://biwatech.com/vesijarvi3/",
     "xproxy": "https://arijolma.org",
     "eslintConfig": {
         "extends": "react-app"
