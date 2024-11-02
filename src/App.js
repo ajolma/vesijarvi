@@ -7,7 +7,7 @@ import MyMap from './components/MyMap.js';
 
 const dev = process.env.NODE_ENV === 'development';
 const host = 'biwatech.com';
-const path = 'vj2-test'; // vj2
+const path = 'vj3';
 export const server = dev ? `http://localhost:5000/${path}` : `https://${host}/${path}`;
 
 class App extends Component {

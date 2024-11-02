@@ -152,7 +152,7 @@ function toObject(arr, key) {
 }
 
 const initReducer = (state=initialState, action) => {
-    console.log(action);
+    //console.log(action);
     let leafs;
     let bounds;
     switch (action.type) {
