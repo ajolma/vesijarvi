@@ -21,7 +21,7 @@
         "eject": "react-scripts eject"
     },
     "ahomepage": "https://www.vesijarvi.fi/karttaohjelma/",
-    "homepage": "https://biwatech.com/vesijarvi3/",
+    "homepage": "https://qa.biwatech.com/vesijarvi",
     "xproxy": "https://arijolma.org",
     "eslintConfig": {
         "extends": "react-app"
@@ -31,5 +31,8 @@
         "not dead",
         "not ie <= 11",
         "not op_mini all"
-    ]
+    ],
+    "devDependencies": {
+        "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+    }
 }

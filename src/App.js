@@ -5,11 +5,11 @@ import { fitBoundsFinally, getLeafs, getPopup } from './actions/initAction';
 import LeftPanel from './components/LeftPanel.js';
 import MyMap from './components/MyMap.js';
 
-const dev = process.env.ENV === 'development';
+const dev = process.env.NODE_ENV === 'development';
 if (dev) {
     console.log("This is development environment.");
 }
-const host = 'biwatech.com';
+const host = 'qa.biwatech.com';
 const path = 'vj3';
 export const server = dev ? `http://localhost:5000/${path}` : `https://${host}/${path}`;
 
